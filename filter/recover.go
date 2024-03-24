@@ -10,30 +10,24 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package cron
+package filter
 
 import (
-	"context"
-	"fmt"
-	"time"
+	"net/http"
 
-	"gitee.com/CertificateAndSigningManageSystem/common/conn"
+	"github.com/gin-gonic/gin"
+
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
+	"gitee.com/CertificateAndSigningManageSystem/common/util"
 )
 
-var _ = MultipartUploadCleaner
-
-// MultipartUploadCleaner 定时清理分片文件上传异常数据
-func MultipartUploadCleaner(ctx context.Context, cronName string, runTime time.Time) {
-	redisClient := conn.GetRedisClient(ctx)
-	// 尝试设置运行标记
-	b, err := redisClient.SetNX(ctx,
-		fmt.Sprintf("%s:%s", cronName, runTime.Format("20060102150405")),
-		"1",
-		5*time.Minute).Result()
-	log.ErrorIf(ctx, err)
-	if !b {
-		// 有其他实例运行了
-		return
-	}
+// Recover 恐慌恢复过滤器
+func Recover(c *gin.Context) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Errorf(c.Request.Context(), "handle request panic %v %s", err, log.GetStack())
+			util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+		}
+	}()
+	c.Next()
 }

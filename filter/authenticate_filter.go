@@ -1,13 +1,26 @@
+/*
+ * Copyright (c) 2023 ivfzhou
+ * backend is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *          http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
 package filter
 
 import (
 	"backend/service"
-	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
-	"gitee.com/CertificateAndSigningManageSystem/common/model"
-	"gitee.com/CertificateAndSigningManageSystem/common/util"
+	"net/http"
+
 	double_array_trie "gitee.com/ivfzhou/double-array-trie"
 	"github.com/gin-gonic/gin"
-	"net/http"
+
+	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
+	"gitee.com/CertificateAndSigningManageSystem/common/util"
 )
 
 var (
@@ -30,46 +43,78 @@ func InitialAuthenticateFilter(pathToAuthorities map[string][]uint) {
 func AuthenticateFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 	path := c.Request.URL.Path
-	userID := ctxs.UserID(ctx)
-	authID := ctxs.APIAuthID(ctx)
+	userId := ctxs.UserId(ctx)
+	authId := ctxs.APIAuthId(ctx)
 
-	// 如果userID合法则校验权限和状态
-	if userID > 0 {
-		userInfo, err := service.GetUserInfoByID(ctx, userID)
+	// 如果userId合法则校验权限和状态
+	if userId > 0 {
+		userInfo, err := service.GetUserInfoById(ctx, userId)
 		if err != nil {
 			c.Abort()
 			util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
 			return
 		}
-		// 用户不存在或者用户状态不正常，则限制请求
-		if userInfo.ID <= 0 || userInfo.Status != model.TUser_Status_OK {
+		// 用户不存在，则限制请求
+		if userInfo.Id <= 0 {
+			c.Abort()
 			util.Fail(c, http.StatusForbidden, "request restricted 请求受限")
 			return
 		}
 		// 获取需要的权限项
 		index := authInfoDat.MatchesIndex(path)
-		// 不存在说明无需权限项，则放行
-		if index < 0 {
-			return
+		// 需要权限
+		if index > 0 {
+			// 检索数据库判断用户是否有权限
+			authorities := authInfoArr[index]
+			has, err := service.HasUserAnyAuthorities(ctx, userId, authorities...)
+			if err != nil {
+				c.Abort()
+				util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+				return
+			}
+			// 无权，限制请求
+			if !has {
+				c.Abort()
+				util.Fail(c, http.StatusForbidden, "request restricted 请求受限")
+				return
+			}
 		}
-		// 检索数据库判断用户是否有权限
-		authorities := authInfoArr[index]
-		has, err := service.HasUserAnyAuthorities(ctx, userID, authorities...)
+	}
+
+	// 如果authId合法则校验权限和其应用状态
+	if authId > 0 {
+		authInfo, err := service.GetAuthInfoById(ctx, authId)
 		if err != nil {
 			c.Abort()
 			util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
 			return
 		}
-		// 无权，限制请求
-		if !has {
+		// 凭证不存在，则限制请求
+		if authInfo.Id <= 0 {
 			c.Abort()
 			util.Fail(c, http.StatusForbidden, "request restricted 请求受限")
 			return
 		}
+		// 获取需要的权限项
+		index := authInfoDat.MatchesIndex(path)
+		// 需要权限
+		if index > 0 {
+			// 检索数据库判断用户是否有权限
+			authorities := authInfoArr[index]
+			has, err := service.HasAuthAnyAuthorities(ctx, authId, authorities...)
+			if err != nil {
+				c.Abort()
+				util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+				return
+			}
+			// 无权，限制请求
+			if !has {
+				c.Abort()
+				util.Fail(c, http.StatusForbidden, "request restricted 请求受限")
+				return
+			}
+		}
 	}
 
-	// 如果authID合法则校验权限和其应用状态
-	if authID > 0 {
-
-	}
+	c.Next()
 }

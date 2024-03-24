@@ -16,30 +16,33 @@ import (
 	"context"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
+	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 )
 
-// GetUserInfoById 根据id获取用户信息
-func GetUserInfoById(ctx context.Context, id uint) (*model.TUser, error) {
-	var info model.TUser
+// GetAuthInfoById 根据id获取凭证信息
+func GetAuthInfoById(ctx context.Context, id uint) (*model.TAuthorization, error) {
+	var info model.TAuthorization
 	err := conn.GetMySQLClient(ctx).Where("id = ?", id).Find(&info).Error
 	if err != nil {
-		log.Error(ctx, "query t_user error 查询用户信息失败", err, id)
+		log.Error(ctx, "query t_authorization error 查询凭证信息失败", err, id)
+		return &info, errs.NewSystemBusyErr(err)
 	}
-	return &info, err
+	return &info, nil
 }
 
-// HasUserAnyAuthorities 判断userId是否具有authorities中任何一个角色
-func HasUserAnyAuthorities(ctx context.Context, userId uint, authorities ...uint) (bool, error) {
+// HasAuthAnyAuthorities 凭证是否有任何一个授权项
+func HasAuthAnyAuthorities(ctx context.Context, authId uint, authorities ...uint) (bool, error) {
 	if len(authorities) <= 0 {
 		return true, nil
 	}
 	var b bool
-	err := conn.GetMySQLClient(ctx).Model(&model.TUserRole{}).Select("count(id)").
-		Where("user_id = ? and role in ?", userId, authorities).Find(&b).Error
+	err := conn.GetMySQLClient(ctx).Model(&model.TAuthorizationActionRelation{}).Select("count(id)").
+		Where("auth_id = ? and action_id in ?", authId, authorities).Find(&b).Error
 	if err != nil {
-		log.Error(ctx, "query t_user_role error 查询用户信息失败", err, userId, authorities)
+		log.Error(ctx, "query t_authorization_action_relation error 查询用户信息失败", err, authId, authorities)
+		return b, errs.NewSystemBusyErr(err)
 	}
-	return b, err
+	return b, nil
 }
