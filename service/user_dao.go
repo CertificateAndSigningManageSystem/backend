@@ -16,6 +16,7 @@ import (
 	"context"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
+	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 )
@@ -27,7 +28,7 @@ func GetUserInfoById(ctx context.Context, id uint) (*model.TUser, error) {
 	if err != nil {
 		log.Error(ctx, "query t_user error 查询用户信息失败", err, id)
 	}
-	return &info, err
+	return &info, errs.NewSystemBusyErr(err)
 }
 
 // HasUserAnyAuthorities 判断userId是否具有authorities中任何一个角色
@@ -41,5 +42,5 @@ func HasUserAnyAuthorities(ctx context.Context, userId uint, authorities ...uint
 	if err != nil {
 		log.Error(ctx, "query t_user_role error 查询用户信息失败", err, userId, authorities)
 	}
-	return b, err
+	return b, errs.NewSystemBusyErr(err)
 }

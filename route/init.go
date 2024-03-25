@@ -22,7 +22,11 @@ import (
 func InitialRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
-
+	engine.Use(filter.Recover, filter.LogfmtFilter)
 	filter.InitialAuthenticateFilter(map[string][]uint{})
+	web := engine.Group("/web", filter.WebAuthFilter, filter.AntiShakeFilter, filter.AuthenticateFilter)
+	api := engine.Group("/api", filter.APIAuthFilter, filter.AuthenticateFilter)
+	_ = web
+	_ = api
 	return engine
 }

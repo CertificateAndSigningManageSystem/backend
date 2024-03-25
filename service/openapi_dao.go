@@ -32,6 +32,17 @@ func GetAuthInfoById(ctx context.Context, id uint) (*model.TAuthorization, error
 	return &info, nil
 }
 
+// GetAuthInfo 获取凭证信息
+func GetAuthInfo(ctx context.Context, appId, authId string) (*model.TAuthorization, error) {
+	var info model.TAuthorization
+	err := conn.GetMySQLClient(ctx).Where("app_id = ? and auth_id = ?", appId, authId).Find(&info).Error
+	if err != nil {
+		log.Error(ctx, "query t_authorization error 查询凭证信息失败", err, appId, authId)
+		return &info, errs.NewSystemBusyErr(err)
+	}
+	return &info, nil
+}
+
 // HasAuthAnyAuthorities 凭证是否有任何一个授权项
 func HasAuthAnyAuthorities(ctx context.Context, authId uint, authorities ...uint) (bool, error) {
 	if len(authorities) <= 0 {

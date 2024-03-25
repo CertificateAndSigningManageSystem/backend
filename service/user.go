@@ -15,20 +15,30 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 )
 
+// ErrUnknownUser 登录时未知用户
+var ErrUnknownUser error = &errs.Error{
+	HTTPStatus: http.StatusUnauthorized,
+	Msg:        "unknown user 未知用户",
+	WrappedErr: fmt.Errorf("unknown user 未知用户"),
+}
+
 // SessionInfo 会话信息
 type SessionInfo struct {
 	LoginIP string
-	model.TUser
+	*model.TUser
 }
 
 // GetSessionInfo 获取会话信息
 func GetSessionInfo(ctx context.Context, session string) (*SessionInfo, error) {
+	// 反序列数据
 	var data struct {
 		UserId  uint   `json:"userId"`
 		LoginIP string `json:"loginIP"`
@@ -39,5 +49,18 @@ func GetSessionInfo(ctx context.Context, session string) (*SessionInfo, error) {
 		return &SessionInfo{}, errs.NewSystemBusyErr(err)
 	}
 
-	return nil, nil
+	// 查库
+	userInfo, err := GetUserInfoById(ctx, data.UserId)
+	if err != nil {
+		return &SessionInfo{}, err
+	}
+	if userInfo.Id <= 0 {
+		log.Warn(ctx, "unknown user 未知用户", session)
+		return &SessionInfo{}, ErrUnknownUser
+	}
+
+	return &SessionInfo{
+		LoginIP: data.LoginIP,
+		TUser:   userInfo,
+	}, nil
 }

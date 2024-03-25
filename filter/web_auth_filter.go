@@ -21,7 +21,10 @@ import (
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
+	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
+
+	"backend/service"
 )
 
 // WebAuthFilter Web接口会话鉴权
@@ -30,7 +33,7 @@ func WebAuthFilter(c *gin.Context) {
 	ip := c.Request.Header.Get("X-Real-IP")
 
 	// 获取会话
-	session, err := c.Request.Cookie("csms_session")
+	sessionStr, err := c.Request.Cookie("csms_session")
 	if err != nil {
 		c.Abort()
 		// 不存在会话凭证
@@ -43,8 +46,8 @@ func WebAuthFilter(c *gin.Context) {
 		return
 	}
 
-	// 获取Redis中会话信息
-	sessionInfo, err := conn.GetRedisClient(ctx).Get(ctx, session.Value).Result()
+	// 获取会话信息
+	sessionVal, err := conn.GetRedisClient(ctx).Get(ctx, sessionStr.Value).Result()
 	if err != nil {
 		c.Abort()
 		if errors.Is(err, redis.Nil) {
@@ -55,7 +58,28 @@ func WebAuthFilter(c *gin.Context) {
 		}
 		return
 	}
+	session, err := service.GetSessionInfo(ctx, sessionVal)
+	if err != nil {
+		c.Abort()
+		// 删除非法会话
+		if errors.Is(err, service.ErrUnknownUser) {
+			log.ErrorIf(ctx, conn.GetRedisClient(ctx).Del(ctx, sessionStr.Value).Err())
+		}
+		util.FailByErr(c, err)
+		return
+	}
 
-	_ = ip
-	_ = sessionInfo
+	// 校验状态和IP
+	if session.TUser.Status != model.TUser_Status_OK {
+		c.Abort()
+		util.Fail(c, http.StatusForbidden, "locked user 账户已锁")
+		return
+	}
+	if session.LoginIP != ip {
+		c.Abort()
+		util.Fail(c, http.StatusUnauthorized, "illegal access 非法访问")
+		return
+	}
+
+	c.Next()
 }

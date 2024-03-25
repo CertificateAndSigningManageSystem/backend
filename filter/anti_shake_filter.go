@@ -35,12 +35,14 @@ const antiShakeRedisScript = `
 -- 防抖使用的Redis Hash键
 local key = 'anti:shake:hash';
 local field = KEYS[1]..KEYS[2];
-local curAccessTime = tonumber(ARGV[1] or 0);
-local limit = tonumber(ARGV[2] or 0);
+-- 获取当前时间
+local nowArr = redis.call('time');
+local curAccessTime = tonumber(nowArr[1]) * 1000);
 -- 获取用户该请求的上次请求时间
 local lastAccessTime = tonumber(redis.call('hget', key, field) or 0);
 -- 比较与本次请求时间
 local delta = curAccessTime - lastAccessTime;
+local limit = tonumber(ARGV[1] or 0);
 if (delta >= 0 and delta < limit) or (delta < 0 and delta > -limit) then
 	return 0;
 end
@@ -84,7 +86,7 @@ func AntiShakeFilter(c *gin.Context) {
 	userId := ctxs.UserId(ctx)
 	reqPath := ctxs.RequestPath(ctx)
 	b, err := conn.GetRedisClient(ctx).EvalSha(ctx, antiShakeRedisCmdSha, []string{strconv.Itoa(int(userId)), reqPath},
-		time.Now().UnixMilli(), antiShakeMinPeriod.Milliseconds()).Bool()
+		antiShakeMinPeriod.Milliseconds()).Bool()
 	if err != nil {
 		c.Abort()
 		log.Error(ctx, "exec redis anti shake script error 执行Redis防抖脚本失败", err)
@@ -94,7 +96,7 @@ func AntiShakeFilter(c *gin.Context) {
 	// 丢掉请求
 	if !b {
 		c.Abort()
-		util.Fail(c, http.StatusTooManyRequests, "many requests 请求频繁")
+		util.Fail(c, http.StatusTooManyRequests, "too many requests 请求频繁")
 		return
 	}
 
