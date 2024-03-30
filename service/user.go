@@ -15,20 +15,11 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net/http"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 )
-
-// ErrUnknownUser 登录时未知用户
-var ErrUnknownUser error = &errs.Error{
-	HTTPStatus: http.StatusUnauthorized,
-	Msg:        "unknown user 未知用户",
-	WrappedErr: fmt.Errorf("unknown user 未知用户"),
-}
 
 // SessionInfo 会话信息
 type SessionInfo struct {
@@ -45,7 +36,7 @@ func GetSessionInfo(ctx context.Context, session string) (*SessionInfo, error) {
 	}
 	err := json.Unmarshal([]byte(session), &data)
 	if err != nil {
-		log.Error(ctx, "json unmarshal error JSON反序列化错误", err, session)
+		log.Error(ctx, "json unmarshal error", err, session)
 		return &SessionInfo{}, errs.NewSystemBusyErr(err)
 	}
 
@@ -55,8 +46,8 @@ func GetSessionInfo(ctx context.Context, session string) (*SessionInfo, error) {
 		return &SessionInfo{}, err
 	}
 	if userInfo.Id <= 0 {
-		log.Warn(ctx, "unknown user 未知用户", session)
-		return &SessionInfo{}, ErrUnknownUser
+		log.Warn(ctx, "unknown user", session)
+		return &SessionInfo{}, errs.ErrUnknownUser
 	}
 
 	return &SessionInfo{

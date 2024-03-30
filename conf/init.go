@@ -24,6 +24,7 @@ var Conf Data
 // Data 配置
 type Data struct {
 	ServeAddr string `ini:"serveAddr"`
+	TusServer string `ini:"tusServer"`
 	Log       `ini:"log"`
 	Redis     `ini:"redis"`
 	MySQL     `ini:"mysql"`

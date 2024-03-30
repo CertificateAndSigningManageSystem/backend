@@ -51,13 +51,13 @@ func AuthenticateFilter(c *gin.Context) {
 		userInfo, err := service.GetUserInfoById(ctx, userId)
 		if err != nil {
 			c.Abort()
-			util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+			util.Fail(c, http.StatusInternalServerError, "system busy")
 			return
 		}
 		// 用户不存在，则限制请求
 		if userInfo.Id <= 0 {
 			c.Abort()
-			util.Fail(c, http.StatusForbidden, "request restricted 请求受限")
+			util.Fail(c, http.StatusForbidden, "request restricted")
 			return
 		}
 		// 获取需要的权限项
@@ -69,13 +69,13 @@ func AuthenticateFilter(c *gin.Context) {
 			has, err := service.HasUserAnyAuthorities(ctx, userId, authorities...)
 			if err != nil {
 				c.Abort()
-				util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+				util.Fail(c, http.StatusInternalServerError, "system busy")
 				return
 			}
 			// 无权，限制请求
 			if !has {
 				c.Abort()
-				util.Fail(c, http.StatusForbidden, "request restricted 请求受限")
+				util.Fail(c, http.StatusForbidden, "request restricted")
 				return
 			}
 		}
@@ -86,13 +86,13 @@ func AuthenticateFilter(c *gin.Context) {
 		authInfo, err := service.GetAuthInfoById(ctx, authId)
 		if err != nil {
 			c.Abort()
-			util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+			util.Fail(c, http.StatusInternalServerError, "system busy")
 			return
 		}
 		// 凭证不存在，则限制请求
 		if authInfo.Id <= 0 {
 			c.Abort()
-			util.Fail(c, http.StatusForbidden, "request restricted 请求受限")
+			util.Fail(c, http.StatusForbidden, "request restricted")
 			return
 		}
 		// 获取需要的权限项
@@ -104,13 +104,13 @@ func AuthenticateFilter(c *gin.Context) {
 			has, err := service.HasAuthAnyAuthorities(ctx, authId, authorities...)
 			if err != nil {
 				c.Abort()
-				util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+				util.Fail(c, http.StatusInternalServerError, "system busy")
 				return
 			}
 			// 无权，限制请求
 			if !has {
 				c.Abort()
-				util.Fail(c, http.StatusForbidden, "request restricted 请求受限")
+				util.Fail(c, http.StatusForbidden, "request restricted")
 				return
 			}
 		}

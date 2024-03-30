@@ -131,7 +131,7 @@ func APIAuthFilter(c *gin.Context) {
 	// 是否授权过期
 	if time.Since(authInfo.ExpireTime) >= 0 {
 		c.Abort()
-		util.Fail(c, http.StatusForbidden, "token validity expire 凭证时效过期")
+		util.Fail(c, http.StatusForbidden, "token validity expire")
 		return
 	}
 	// 签发时间大于当前时间
@@ -144,7 +144,7 @@ func APIAuthFilter(c *gin.Context) {
 	}
 	if time.Since(issuedAt.Time) <= 0 {
 		c.Abort()
-		util.Fail(c, http.StatusUnauthorized, "token invalid 非法凭证")
+		util.Fail(c, http.StatusUnauthorized, "token invalid")
 		return
 	}
 	// 凭证时效不能大雨两小时
@@ -157,7 +157,7 @@ func APIAuthFilter(c *gin.Context) {
 	}
 	if expirationTime.Sub(issuedAt.Time) > 2*time.Hour {
 		c.Abort()
-		util.Fail(c, http.StatusUnauthorized, "too long token age 非法凭证")
+		util.Fail(c, http.StatusUnauthorized, "too long token age")
 		return
 	}
 	// 校验请求IP
@@ -185,7 +185,7 @@ func APIAuthFilter(c *gin.Context) {
 		}
 		if !isPass {
 			c.Abort()
-			util.Fail(c, http.StatusUnauthorized, "ip not allow 请求IP非法")
+			util.Fail(c, http.StatusUnauthorized, "ip not allow")
 			return
 		}
 	}
@@ -193,7 +193,7 @@ func APIAuthFilter(c *gin.Context) {
 	apiAuthOnce.Do(func() {
 		apiAuthLimitScriptSha, err = conn.GetRedisClient(ctx).ScriptLoad(ctx, apiAuthLimitScript).Result()
 		if err != nil {
-			log.Fatal(ctx, "load apiauth script error 加载限流脚本失败", err)
+			log.Fatal(ctx, "load apiauth script error", err)
 		}
 	})
 	b, err := conn.GetRedisClient(ctx).EvalSha(ctx, apiAuthLimitScriptSha,
@@ -207,7 +207,7 @@ func APIAuthFilter(c *gin.Context) {
 	}
 	if !b {
 		c.Abort()
-		util.Fail(c, http.StatusTooManyRequests, "too many request 请求限流")
+		util.Fail(c, http.StatusTooManyRequests, "too many request")
 		return
 	}
 

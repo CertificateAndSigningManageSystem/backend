@@ -10,24 +10,18 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package filter
+package route
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 
-	"gitee.com/CertificateAndSigningManageSystem/common/log"
-	"gitee.com/CertificateAndSigningManageSystem/common/util"
+	"backend/api"
 )
 
-// Recover 恐慌恢复过滤器
-func Recover(c *gin.Context) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Errorf(c.Request.Context(), "handle request panic %v %s", err, log.GetStack())
-			util.Fail(c, http.StatusInternalServerError, "system busy")
-		}
-	}()
-	c.Next()
+func initAPIRoute(r *gin.RouterGroup) {
+	upload := &api.UploadAPI{}
+	uploadGroup := r.Group("/upload")
+	uploadGroup.POST("/initialUpload", upload.InitialUpload)
+	uploadGroup.PATCH("/uploadPart", upload.UploadPart)
+	uploadGroup.POST("/mergePart", upload.MergePart)
 }

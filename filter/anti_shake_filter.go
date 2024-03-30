@@ -65,13 +65,13 @@ func AntiShakeFilter(c *gin.Context) {
 	reqDate, err := time.Parse("Mon, 02 Jan 2006 15:04:05 GMT", date)
 	if err != nil {
 		c.Abort()
-		util.Fail(c, http.StatusBadRequest, "unknown request date 位置请求时间")
+		util.Fail(c, http.StatusBadRequest, "unknown request date")
 		return
 	}
 	// 请求时间超时
 	if time.Since(reqDate) > antiShakeMaxPeriod {
 		c.Abort()
-		util.Fail(c, http.StatusBadRequest, "request timeout 请求时间超时")
+		util.Fail(c, http.StatusBadRequest, "request timeout")
 		return
 	}
 
@@ -80,7 +80,7 @@ func AntiShakeFilter(c *gin.Context) {
 		var err error
 		antiShakeRedisCmdSha, err = conn.GetRedisClient(ctx).ScriptLoad(ctx, antiShakeRedisScript).Result()
 		if err != nil {
-			log.Fatal(ctx, "load anti shake redis script error 加载防抖Redis脚本失败", err)
+			log.Fatal(ctx, "load anti shake redis script error", err)
 		}
 	})
 	userId := ctxs.UserId(ctx)
@@ -89,14 +89,14 @@ func AntiShakeFilter(c *gin.Context) {
 		antiShakeMinPeriod.Milliseconds()).Bool()
 	if err != nil {
 		c.Abort()
-		log.Error(ctx, "exec redis anti shake script error 执行Redis防抖脚本失败", err)
-		util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+		log.Error(ctx, "exec redis anti shake script error", err)
+		util.Fail(c, http.StatusInternalServerError, "system busy")
 		return
 	}
 	// 丢掉请求
 	if !b {
 		c.Abort()
-		util.Fail(c, http.StatusTooManyRequests, "too many requests 请求频繁")
+		util.Fail(c, http.StatusTooManyRequests, "too many requests")
 		return
 	}
 

@@ -26,7 +26,7 @@ func GetUserInfoById(ctx context.Context, id uint) (*model.TUser, error) {
 	var info model.TUser
 	err := conn.GetMySQLClient(ctx).Where("id = ?", id).Find(&info).Error
 	if err != nil {
-		log.Error(ctx, "query t_user error 查询用户信息失败", err, id)
+		log.Error(ctx, "query t_user error", err, id)
 	}
 	return &info, errs.NewSystemBusyErr(err)
 }
@@ -40,7 +40,7 @@ func HasUserAnyAuthorities(ctx context.Context, userId uint, authorities ...uint
 	err := conn.GetMySQLClient(ctx).Model(&model.TUserRole{}).Select("count(id)").
 		Where("user_id = ? and role in ?", userId, authorities).Find(&b).Error
 	if err != nil {
-		log.Error(ctx, "query t_user_role error 查询用户信息失败", err, userId, authorities)
+		log.Error(ctx, "query t_user_role error", err, userId, authorities)
 	}
 	return b, errs.NewSystemBusyErr(err)
 }

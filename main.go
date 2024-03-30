@@ -13,16 +13,18 @@
 package main
 
 import (
-	"backend/conf"
-	"backend/route"
+	_ "backend/docs"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
+
+	"backend/conf"
+	"backend/route"
 )
 
 func init() {
-	conf.InitialConf("")
+	conf.InitialConf("config.ini")
 	log.InitialLog(conf.Conf.Log.LogDir, conf.Conf.Log.Module, conf.Conf.Log.MaxAge, conf.Conf.Log.Rotation,
 		conf.Conf.Log.Debug)
 	ctx := ctxs.NewCtx("init")
@@ -30,6 +32,7 @@ func init() {
 	conn.InitialMySQL(ctx, conf.Conf.MySQL.User, conf.Conf.MySQL.Passwd, conf.Conf.MySQL.Host, conf.Conf.MySQL.Port,
 		conf.Conf.MySQL.DB, conf.Conf.MySQL.MaxIdea, conf.Conf.MySQL.MaxOpen)
 	conn.InitialRabbitMQ(ctx, conf.Conf.RabbitMQ.URI)
+	conn.InitialTusClient(ctx, conf.Conf.TusServer)
 	log.FatalIfError(ctx, conn.AutoMigrateAllTable(ctx))
 }
 

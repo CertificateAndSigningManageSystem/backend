@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
+	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
@@ -38,10 +39,10 @@ func WebAuthFilter(c *gin.Context) {
 		c.Abort()
 		// 不存在会话凭证
 		if errors.Is(err, http.ErrNoCookie) {
-			util.Fail(c, http.StatusUnauthorized, "please login first 请先登录")
+			util.Fail(c, http.StatusUnauthorized, "please login first")
 		} else {
-			log.Error(ctx, "obtain cookie error 获取登录会话失败", err)
-			util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+			log.Error(ctx, "obtain cookie error", err)
+			util.Fail(c, http.StatusInternalServerError, "system busy")
 		}
 		return
 	}
@@ -51,10 +52,10 @@ func WebAuthFilter(c *gin.Context) {
 	if err != nil {
 		c.Abort()
 		if errors.Is(err, redis.Nil) {
-			util.Fail(c, http.StatusUnauthorized, "please login first 请先登录")
+			util.Fail(c, http.StatusUnauthorized, "please login first")
 		} else {
-			log.Error(ctx, "obtain redis key error 获取缓存信息失败", err)
-			util.Fail(c, http.StatusInternalServerError, "system busy 系统繁忙")
+			log.Error(ctx, "obtain redis key error", err)
+			util.Fail(c, http.StatusInternalServerError, "system busy")
 		}
 		return
 	}
@@ -62,7 +63,7 @@ func WebAuthFilter(c *gin.Context) {
 	if err != nil {
 		c.Abort()
 		// 删除非法会话
-		if errors.Is(err, service.ErrUnknownUser) {
+		if errors.Is(err, errs.ErrUnknownUser) {
 			log.ErrorIf(ctx, conn.GetRedisClient(ctx).Del(ctx, sessionStr.Value).Err())
 		}
 		util.FailByErr(c, err)
@@ -72,12 +73,12 @@ func WebAuthFilter(c *gin.Context) {
 	// 校验状态和IP
 	if session.TUser.Status != model.TUser_Status_OK {
 		c.Abort()
-		util.Fail(c, http.StatusForbidden, "locked user 账户已锁")
+		util.Fail(c, http.StatusForbidden, "locked user")
 		return
 	}
 	if session.LoginIP != ip {
 		c.Abort()
-		util.Fail(c, http.StatusUnauthorized, "illegal access 非法访问")
+		util.Fail(c, http.StatusUnauthorized, "illegal access")
 		return
 	}
 

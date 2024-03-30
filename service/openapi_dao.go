@@ -26,7 +26,7 @@ func GetAuthInfoById(ctx context.Context, id uint) (*model.TAuthorization, error
 	var info model.TAuthorization
 	err := conn.GetMySQLClient(ctx).Where("id = ?", id).Find(&info).Error
 	if err != nil {
-		log.Error(ctx, "query t_authorization error 查询凭证信息失败", err, id)
+		log.Error(ctx, "query t_authorization error", err, id)
 		return &info, errs.NewSystemBusyErr(err)
 	}
 	return &info, nil
@@ -37,7 +37,7 @@ func GetAuthInfo(ctx context.Context, appId, authId string) (*model.TAuthorizati
 	var info model.TAuthorization
 	err := conn.GetMySQLClient(ctx).Where("app_id = ? and auth_id = ?", appId, authId).Find(&info).Error
 	if err != nil {
-		log.Error(ctx, "query t_authorization error 查询凭证信息失败", err, appId, authId)
+		log.Error(ctx, "query t_authorization error", err, appId, authId)
 		return &info, errs.NewSystemBusyErr(err)
 	}
 	return &info, nil
@@ -52,7 +52,7 @@ func HasAuthAnyAuthorities(ctx context.Context, authId uint, authorities ...uint
 	err := conn.GetMySQLClient(ctx).Model(&model.TAuthorizationActionRelation{}).Select("count(id)").
 		Where("auth_id = ? and action_id in ?", authId, authorities).Find(&b).Error
 	if err != nil {
-		log.Error(ctx, "query t_authorization_action_relation error 查询用户信息失败", err, authId, authorities)
+		log.Error(ctx, "query t_authorization_action_relation error", err, authId, authorities)
 		return b, errs.NewSystemBusyErr(err)
 	}
 	return b, nil
