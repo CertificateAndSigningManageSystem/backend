@@ -24,7 +24,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "upload-api"
+                    "file-api"
                 ],
                 "summary": "初始化分片上传",
                 "parameters": [
@@ -58,13 +58,10 @@ const docTemplate = `{
         "/api/upload/mergePart": {
             "post": {
                 "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
+                    "application/x-www-form-urlencoded"
                 ],
                 "tags": [
-                    "upload-api"
+                    "file-api"
                 ],
                 "summary": "合并分片",
                 "parameters": [
@@ -76,11 +73,13 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
                         "description": "文件Id",
                         "name": "fileId",
-                        "in": "query",
-                        "required": true
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -96,7 +95,7 @@ const docTemplate = `{
                     "multipart/form-data"
                 ],
                 "tags": [
-                    "upload-api"
+                    "file-api"
                 ],
                 "summary": "上传分片",
                 "parameters": [
@@ -118,14 +117,14 @@ const docTemplate = `{
                         "type": "string",
                         "description": "分片序号",
                         "name": "fileId",
-                        "in": "query",
+                        "in": "formData",
                         "required": true
                     },
                     {
                         "type": "integer",
                         "description": "文件Id",
                         "name": "chunkNum",
-                        "in": "query",
+                        "in": "formData",
                         "required": true
                     }
                 ],

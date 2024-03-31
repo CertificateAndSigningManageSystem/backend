@@ -20,6 +20,7 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 
 	"backend/conf"
+	"backend/cron"
 	"backend/route"
 )
 
@@ -33,6 +34,7 @@ func init() {
 		conf.Conf.MySQL.DB, conf.Conf.MySQL.MaxIdea, conf.Conf.MySQL.MaxOpen)
 	conn.InitialRabbitMQ(ctx, conf.Conf.RabbitMQ.URI)
 	conn.InitialTusClient(ctx, conf.Conf.TusServer)
+	cron.InitialCron(ctx)
 	log.FatalIfError(ctx, conn.AutoMigrateAllTable(ctx))
 }
 

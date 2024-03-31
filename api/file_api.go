@@ -31,7 +31,7 @@ type UploadAPI struct{}
 // InitialUpload godoc
 //
 //	@Summary	初始化分片上传
-//	@Tags		upload-api
+//	@Tags		file-api
 //	@Accept		json
 //	@Produce	json
 //	@Param		Authorization	header		string						true	"jwt凭证"
@@ -40,6 +40,8 @@ type UploadAPI struct{}
 //	@Router		/api/upload/initialUpload [post]
 func (*UploadAPI) InitialUpload(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	// 获取请求参数
 	var req protocol.InitialUploadReq
 	err := c.ShouldBind(&req)
 	if err != nil {
@@ -47,29 +49,32 @@ func (*UploadAPI) InitialUpload(c *gin.Context) {
 		util.FailByErr(c, errs.NewParamsErr(err))
 		return
 	}
+
+	// 调用下游
 	rsp, err := service.InitialUpload(ctx, &req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
 	}
+
 	util.Success(c, rsp)
 }
 
 // UploadPart godoc
 //
 //	@Summary	上传分片
-//	@Tags		upload-api
+//	@Tags		file-api
 //	@Accept		mpfd
 //	@Param		Authorization	header		string	true	"jwt凭证"
 //	@Param		file			formData	file	true	"文件"
-//	@Param		fileId			query		string	true	"分片序号"
-//	@Param		chunkNum		query		integer	true	"文件Id"
+//	@Param		fileId			formData	string	true	"分片序号"
+//	@Param		chunkNum		formData	integer	true	"文件Id"
 //	@Success	200				{object}	nil
 //	@Router		/api/upload/uploadPart [patch]
 func (*UploadAPI) UploadPart(c *gin.Context) {
 	ctx := c.Request.Context()
-	chunkNum, _ := strconv.Atoi(c.Query("chunkNum"))
-	fileId := c.Query("fileId")
+
+	// 获取请求参数
 	multipartForm, err := c.MultipartForm()
 	if err != nil {
 		log.Warn(ctx, err)
@@ -81,7 +86,6 @@ func (*UploadAPI) UploadPart(c *gin.Context) {
 		util.FailByErr(c, errs.NewParamsErr(nil))
 		return
 	}
-
 	file := files[0]
 	fileObj, err := file.Open()
 	if err != nil {
@@ -90,6 +94,20 @@ func (*UploadAPI) UploadPart(c *gin.Context) {
 		return
 	}
 	defer util.CloseIO(ctx, fileObj)
+	fileIds := multipartForm.Value["fileId"]
+	if len(fileIds) != 1 {
+		util.FailByErr(c, errs.NewParamsErr(nil))
+		return
+	}
+	fileId := fileIds[0]
+	chunkNums := multipartForm.Value["chunkNum"]
+	if len(chunkNums) != 1 {
+		util.FailByErr(c, errs.NewParamsErr(nil))
+		return
+	}
+	chunkNum, _ := strconv.Atoi(chunkNums[0])
+
+	// 调用下游
 	err = service.UploadPart(ctx, &protocol.UploadPartReq{
 		FileId:    fileId,
 		ChunkNum:  chunkNum,
@@ -100,26 +118,31 @@ func (*UploadAPI) UploadPart(c *gin.Context) {
 		util.FailByErr(c, err)
 		return
 	}
+
 	util.Success(c, "")
 }
 
 // MergePart godoc
 //
 //	@Summary	合并分片
-//	@Tags		upload-api
-//	@Accept		json
-//	@Produce	json
+//	@Tags		file-api
+//	@Accept		x-www-form-urlencoded
 //	@Param		Authorization	header		string	true	"jwt凭证"
-//	@Param		fileId			query		string	true	"文件Id"
+//	@Param		fileId			body		string	true	"文件Id"
 //	@Success	200				{object}	nil
 //	@Router		/api/upload/mergePart [post]
 func (*UploadAPI) MergePart(c *gin.Context) {
 	ctx := c.Request.Context()
-	fileId := c.Query("fileId")
+
+	// 获取参数
+	fileId := c.PostForm("fileId")
+
+	// 调用下游
 	err := service.MergePart(ctx, &protocol.MergePartReq{FileId: fileId})
 	if err != nil {
 		util.FailByErr(c, err)
 		return
 	}
+
 	util.SuccessMsg(c, "上传成功")
 }

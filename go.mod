@@ -22,6 +22,7 @@ require (
 	github.com/go-ini/ini v1.67.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
+	github.com/ivfzhou/cron/v3 v3.1.0
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
