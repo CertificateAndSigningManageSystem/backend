@@ -13,15 +13,17 @@
 package route
 
 import (
-	"backend/filter"
+	"context"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	"backend/filter"
 )
 
 // InitialRouter 初始化路由
-func InitialRouter() *gin.Engine {
+func InitialRouter(ctx context.Context) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	engine.Use(filter.Recover, filter.LogfmtFilter)
@@ -29,11 +31,13 @@ func InitialRouter() *gin.Engine {
 	swagger := engine.Group("/swagger")
 	swagger.GET("*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	filter.InitialAuthenticateFilter(map[string][]uint{})
 	web := engine.Group("/web", filter.WebAuthFilter, filter.AuthenticateFilter)
 	api := engine.Group("/api", filter.APIAuthFilter, filter.AuthenticateFilter)
 	initWebRoute(web)
 	initAPIRoute(api)
+	filter.InitialPathAuthoritiesDAT()
+	filter.InitialAPIAuthLimitScript(ctx)
+	filter.InitialAntiShakeScript(ctx)
 
 	return engine
 }

@@ -13,12 +13,11 @@
 package filter
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"gitee.com/ivfzhou/gotools/v4"
@@ -26,9 +25,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
+	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
-	"gitee.com/CertificateAndSigningManageSystem/common/model"
+	. "gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
 	"backend/service"
@@ -58,17 +58,16 @@ end
 redis.call('hmset', key, 'lastAccessTime', now, 'residue', canCost);
 return 0;`
 
-// ErrNeedAuth 无授权或授权非法
-var ErrNeedAuth error = &errs.Error{
-	HTTPStatus: http.StatusUnauthorized,
-	Msg:        "need authorization 未授权",
-	WrappedErr: fmt.Errorf("need authorization 未授权"),
-}
+var apiAuthLimitScriptSha string
 
-var (
-	apiAuthOnce           sync.Once
-	apiAuthLimitScriptSha string
-)
+// InitialAPIAuthLimitScript 获取Redis脚本Sha。
+func InitialAPIAuthLimitScript(ctx context.Context) {
+	var err error
+	apiAuthLimitScriptSha, err = conn.GetRedisClient(ctx).ScriptLoad(ctx, apiAuthLimitScript).Result()
+	if err != nil {
+		log.Fatal(ctx, "load apiauth script error", err)
+	}
+}
 
 // APIAuthFilter API访问鉴权
 func APIAuthFilter(c *gin.Context) {
@@ -78,14 +77,14 @@ func APIAuthFilter(c *gin.Context) {
 	token := c.Request.Header.Get("Authorization")
 	if len(token) <= 5 {
 		c.Abort()
-		util.FailByErr(c, ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNeedAuth)
 		return
 	}
 	token = token[5:]
 
 	// 解析JWT凭证
-	var authInfo *model.TAuthorization
-	res, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+	var authInfo *TAuthorization
+	res, err := jwt.Parse(token, func(token *jwt.Token) (any, error) {
 		appId, err := token.Claims.GetIssuer()
 		if err != nil {
 			return nil, errs.NewSystemBusyErr(err)
@@ -99,33 +98,38 @@ func APIAuthFilter(c *gin.Context) {
 			return nil, err
 		}
 		if authInfo.Id <= 0 {
-
-			return nil, ErrNeedAuth
+			return nil, errs.ErrNeedAuth
 		}
 		return []byte(authInfo.Secret), nil
 	})
+	if err != nil {
+		log.Error(ctx, err)
+		c.Abort()
+		util.FailByErr(c, err)
+		return
+	}
 
 	// 校验
 	switch {
 	case !res.Valid:
 		log.Warn(ctx, "api token invalid", token)
 		c.Abort()
-		util.FailByErr(c, ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNeedAuth)
 		return
 	case errors.Is(err, jwt.ErrTokenMalformed):
 		log.Warn(ctx, "api token malformed", token)
 		c.Abort()
-		util.FailByErr(c, ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNeedAuth)
 		return
 	case errors.Is(err, jwt.ErrTokenSignatureInvalid):
 		log.Warn(ctx, "api token sign invalid", token)
 		c.Abort()
-		util.FailByErr(c, ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNeedAuth)
 		return
 	case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
 		log.Warn(ctx, "api token expire", token)
 		c.Abort()
-		util.FailByErr(c, ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNeedAuth)
 		return
 	}
 	// 是否授权过期
@@ -147,7 +151,7 @@ func APIAuthFilter(c *gin.Context) {
 		util.Fail(c, http.StatusUnauthorized, "token invalid")
 		return
 	}
-	// 凭证时效不能大雨两小时
+	// 凭证时效不能大于两小时
 	expirationTime, err := res.Claims.GetExpirationTime()
 	if err != nil {
 		log.Error(ctx, err)
@@ -190,12 +194,6 @@ func APIAuthFilter(c *gin.Context) {
 		}
 	}
 	// 请求限流校验
-	apiAuthOnce.Do(func() {
-		apiAuthLimitScriptSha, err = conn.GetRedisClient(ctx).ScriptLoad(ctx, apiAuthLimitScript).Result()
-		if err != nil {
-			log.Fatal(ctx, "load apiauth script error", err)
-		}
-	})
 	b, err := conn.GetRedisClient(ctx).EvalSha(ctx, apiAuthLimitScriptSha,
 		[]string{strconv.Itoa(int(authInfo.AppId)), strconv.Itoa(int(authInfo.Id))},
 		authInfo.Frequency*60*1000*1000, authInfo.Frequency*60*1000*1000, 1).Bool()
@@ -211,5 +209,7 @@ func APIAuthFilter(c *gin.Context) {
 		return
 	}
 
+	ctx = ctxs.WithAPIAuthId(ctx, authInfo.Id)
+	c.Request = c.Request.WithContext(ctx)
 	c.Next()
 }

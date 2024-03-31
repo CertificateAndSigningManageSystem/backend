@@ -258,7 +258,7 @@ func MergePart(ctx context.Context, req *MergePartReq) error {
 	if index >= 0 {
 		ext = fileInfo.Name[index+1:]
 	}
-	err = conn.GetMySQLClient(ctx).Create(&TFile{
+	file := &TFile{
 		FileId:     req.FileId,
 		UserId:     uid,
 		TusdId:     location,
@@ -269,7 +269,8 @@ func MergePart(ctx context.Context, req *MergePartReq) error {
 		SHA256:     fileInfo.SHA256,
 		Size:       fileInfo.Size,
 		CreateTime: time.Now(),
-	}).Error
+	}
+	err = conn.GetMySQLClient(ctx).Table(file.TableName()).Create(file).Error
 	if err != nil {
 		log.Error(ctx, location, err)
 		return errs.NewSystemBusyErr(err)

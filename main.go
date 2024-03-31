@@ -40,7 +40,7 @@ func init() {
 
 func main() {
 	ctx := ctxs.NewCtx("main")
-	router := route.InitialRouter()
+	router := route.InitialRouter(ctx)
 	log.Info(ctx, "start serve 启动服务")
 	log.ErrorIf(ctx, router.Run(conf.Conf.ServeAddr))
 	log.Warn(ctx, "exit serve 退出服务")

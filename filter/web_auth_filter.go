@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
+	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
@@ -34,7 +35,7 @@ func WebAuthFilter(c *gin.Context) {
 	ip := c.Request.Header.Get("X-Real-IP")
 
 	// 获取会话
-	sessionStr, err := c.Request.Cookie("csms_session")
+	sessionCookie, err := c.Request.Cookie("csms_session")
 	if err != nil {
 		c.Abort()
 		// 不存在会话凭证
@@ -48,7 +49,7 @@ func WebAuthFilter(c *gin.Context) {
 	}
 
 	// 获取会话信息
-	sessionVal, err := conn.GetRedisClient(ctx).Get(ctx, sessionStr.Value).Result()
+	sessionStr, err := conn.GetRedisClient(ctx).Get(ctx, sessionCookie.Value).Result()
 	if err != nil {
 		c.Abort()
 		if errors.Is(err, redis.Nil) {
@@ -59,12 +60,12 @@ func WebAuthFilter(c *gin.Context) {
 		}
 		return
 	}
-	session, err := service.GetSessionInfo(ctx, sessionVal)
+	session, err := service.GetSessionInfo(ctx, sessionStr)
 	if err != nil {
 		c.Abort()
 		// 删除非法会话
 		if errors.Is(err, errs.ErrUnknownUser) {
-			log.ErrorIf(ctx, conn.GetRedisClient(ctx).Del(ctx, sessionStr.Value).Err())
+			log.ErrorIf(ctx, conn.GetRedisClient(ctx).Del(ctx, sessionCookie.Value).Err())
 		}
 		util.FailByErr(c, err)
 		return
@@ -82,5 +83,7 @@ func WebAuthFilter(c *gin.Context) {
 		return
 	}
 
+	ctx = ctxs.WithUserId(ctx, session.TUser.Id)
+	c.Request = c.Request.WithContext(ctx)
 	c.Next()
 }

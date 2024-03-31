@@ -13,9 +13,9 @@
 package filter
 
 import (
+	"context"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -27,11 +27,9 @@ import (
 )
 
 const (
-	antiShakeMinPeriod = 800 * time.Millisecond
-	antiShakeMaxPeriod = time.Minute
-)
-
-const antiShakeRedisScript = `
+	antiShakeMinPeriod   = 800 * time.Millisecond
+	antiShakeMaxPeriod   = time.Minute
+	antiShakeRedisScript = `
 -- 防抖使用的Redis Hash键
 local key = 'anti:shake:hash';
 local field = KEYS[1]..KEYS[2];
@@ -50,11 +48,18 @@ end
 redis.call('hset', key, field, curAccessTime);
 return 1;
 `
-
-var (
-	antiShakeOnce        sync.Once
-	antiShakeRedisCmdSha string
 )
+
+var antiShakeRedisCmdSha string
+
+// InitialAntiShakeScript 初始化防抖脚本
+func InitialAntiShakeScript(ctx context.Context) {
+	var err error
+	antiShakeRedisCmdSha, err = conn.GetRedisClient(ctx).ScriptLoad(ctx, antiShakeRedisScript).Result()
+	if err != nil {
+		log.Fatal(ctx, "load anti shake redis script error", err)
+	}
+}
 
 // AntiShakeFilter 请求防抖过滤器
 func AntiShakeFilter(c *gin.Context) {
@@ -76,13 +81,6 @@ func AntiShakeFilter(c *gin.Context) {
 	}
 
 	// 执行Redis脚本
-	antiShakeOnce.Do(func() {
-		var err error
-		antiShakeRedisCmdSha, err = conn.GetRedisClient(ctx).ScriptLoad(ctx, antiShakeRedisScript).Result()
-		if err != nil {
-			log.Fatal(ctx, "load anti shake redis script error", err)
-		}
-	})
 	userId := ctxs.UserId(ctx)
 	reqPath := ctxs.RequestPath(ctx)
 	b, err := conn.GetRedisClient(ctx).EvalSha(ctx, antiShakeRedisCmdSha, []string{strconv.Itoa(int(userId)), reqPath},

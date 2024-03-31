@@ -13,7 +13,6 @@
 package filter
 
 import (
-	"backend/service"
 	"net/http"
 
 	double_array_trie "gitee.com/ivfzhou/double-array-trie"
@@ -21,15 +20,18 @@ import (
 
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
+
+	"backend/service"
 )
 
 var (
-	authInfoDat *double_array_trie.Dat
-	authInfoArr [][]uint
+	authInfoDat       *double_array_trie.Dat
+	authInfoArr       [][]uint
+	pathToAuthorities = make(map[string][]uint)
 )
 
-// InitialAuthenticateFilter 初始化鉴权函数
-func InitialAuthenticateFilter(pathToAuthorities map[string][]uint) {
+// InitialPathAuthoritiesDAT 初始化鉴权函数
+func InitialPathAuthoritiesDAT() {
 	paths := make([]string, 0, len(pathToAuthorities))
 	authInfoArr = make([][]uint, 0, len(pathToAuthorities))
 	for path, authorities := range pathToAuthorities {
@@ -37,6 +39,11 @@ func InitialAuthenticateFilter(pathToAuthorities map[string][]uint) {
 		authInfoArr = append(authInfoArr, authorities)
 	}
 	authInfoDat = double_array_trie.New(paths)
+}
+
+// AddPathAuthorities 添加请求权限
+func AddPathAuthorities(path string, auths []uint) {
+	pathToAuthorities[path] = auths
 }
 
 // AuthenticateFilter 鉴权函数

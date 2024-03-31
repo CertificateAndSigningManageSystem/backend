@@ -22,6 +22,7 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
+	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
 	"backend/service"
 )
@@ -45,7 +46,7 @@ func MultipartUploadCleaner(ctx context.Context, cronName string, runTime time.T
 	// 尝试设置运行标记
 	b, err := redisClient.SetNX(ctx,
 		fmt.Sprintf(conn.CacheKey_CronRecordFmt, cronName, runTime.Format("20060102150405")),
-		"1", 5*time.Minute).Result()
+		util.GetLocalNoLoopIP(), 24*time.Hour).Result()
 	log.ErrorIf(ctx, err)
 	if !b {
 		// 有其他实例运行了
