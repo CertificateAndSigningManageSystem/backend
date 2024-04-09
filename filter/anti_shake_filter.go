@@ -74,9 +74,9 @@ func AntiShakeFilter(c *gin.Context) {
 		return
 	}
 	// 请求时间超时
-	if time.Since(reqDate) > antiShakeMaxPeriod {
+	if since := time.Since(reqDate); since > antiShakeMaxPeriod || since < 0 {
 		c.Abort()
-		util.Fail(c, http.StatusBadRequest, "request timeout")
+		util.Fail(c, http.StatusPreconditionFailed, "request timeout")
 		return
 	}
 

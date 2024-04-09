@@ -20,9 +20,20 @@ import (
 )
 
 func initWebRoute(r *gin.RouterGroup) {
+	// 文件接口
 	upload := &api.UploadAPI{}
 	uploadGroup := r.Group("/upload")
-	uploadGroup.POST("/initialUpload", upload.InitialUpload, filter.AntiShakeFilter)
+	uploadGroup.POST("/initialUpload", filter.AntiShakeFilter, upload.InitialUpload)
 	uploadGroup.PATCH("/uploadPart", upload.UploadPart)
-	uploadGroup.POST("/mergePart", upload.MergePart, filter.AntiShakeFilter)
+	uploadGroup.POST("/mergePart", filter.AntiShakeFilter, upload.MergePart)
+
+	// 用户管理模块
+	user := &api.UserApi{}
+	userGroup := r.Group("/user", filter.AntiShakeFilter)
+	userGroup.POST("/register", user.Register)
+	userGroup.POST("/login", user.Login)
+	userGroup.DELETE("/logout", user.Logout)
+	userGroup.PUT("/updateInfo", user.UpdateInfo)
+	userGroup.POST("/changePasswd", user.ChangePasswd)
+	userGroup.GET("/info", user.Info)
 }

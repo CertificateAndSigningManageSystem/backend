@@ -11,3 +11,38 @@
  */
 
 package api
+
+import "github.com/gin-gonic/gin"
+
+// UserApi 用户管理模块
+type UserApi struct{}
+
+// Register 注册
+func (*UserApi) Register(c *gin.Context) {
+
+}
+
+// Login 登录
+func (*UserApi) Login(c *gin.Context) {
+
+}
+
+// Logout 登出
+func (*UserApi) Logout(c *gin.Context) {
+
+}
+
+// UpdateInfo 更新个人信息
+func (*UserApi) UpdateInfo(c *gin.Context) {
+
+}
+
+// ChangePasswd 修改密码
+func (*UserApi) ChangePasswd(c *gin.Context) {
+
+}
+
+// Info 获取个人信息
+func (*UserApi) Info(c *gin.Context) {
+
+}

@@ -148,7 +148,7 @@ func APIAuthFilter(c *gin.Context) {
 	}
 	if time.Since(issuedAt.Time) <= 0 {
 		c.Abort()
-		util.Fail(c, http.StatusUnauthorized, "token invalid")
+		util.Fail(c, http.StatusPreconditionFailed, "token invalid")
 		return
 	}
 	// 凭证时效不能大于两小时
@@ -161,7 +161,7 @@ func APIAuthFilter(c *gin.Context) {
 	}
 	if expirationTime.Sub(issuedAt.Time) > 2*time.Hour {
 		c.Abort()
-		util.Fail(c, http.StatusUnauthorized, "too long token age")
+		util.Fail(c, http.StatusPreconditionFailed, "too long token age")
 		return
 	}
 	// 校验请求IP
@@ -189,7 +189,7 @@ func APIAuthFilter(c *gin.Context) {
 		}
 		if !isPass {
 			c.Abort()
-			util.Fail(c, http.StatusUnauthorized, "ip not allow")
+			util.Fail(c, http.StatusForbidden, "ip not allow")
 			return
 		}
 	}
