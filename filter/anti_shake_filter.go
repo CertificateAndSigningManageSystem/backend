@@ -83,8 +83,8 @@ func AntiShakeFilter(c *gin.Context) {
 	// 执行Redis脚本
 	userId := ctxs.UserId(ctx)
 	reqPath := ctxs.RequestPath(ctx)
-	b, err := conn.GetRedisClient(ctx).EvalSha(ctx, antiShakeRedisCmdSha, []string{strconv.Itoa(int(userId)), reqPath},
-		antiShakeMinPeriod.Milliseconds()).Bool()
+	b, err := conn.GetRedisClient(ctx).EvalSha(ctx, antiShakeRedisCmdSha,
+		[]string{strconv.Itoa(int(userId)), reqPath}, antiShakeMinPeriod.Milliseconds()).Bool()
 	if err != nil {
 		c.Abort()
 		log.Error(ctx, "exec redis anti shake script error", err)

@@ -65,10 +65,12 @@ func LogfmtFilter(c *gin.Context) {
 		msg, err := url.QueryUnescape(msg)
 		if err == nil && len(msg) > 0 {
 			log.Warn(ctx, "END PROCESS",
-				cost, c.Writer.Status(), http.StatusText(c.Writer.Status()), c.Writer.Header().Get("Content-Length"), msg)
+				cost, c.Writer.Status(), http.StatusText(c.Writer.Status()),
+				c.Writer.Header().Get("Content-Length"), msg)
 		} else {
 			log.Info(ctx, "END PROCESS",
-				cost, c.Writer.Status(), http.StatusText(c.Writer.Status()), c.Writer.Header().Get("Content-Length"))
+				cost, c.Writer.Status(), http.StatusText(c.Writer.Status()),
+				c.Writer.Header().Get("Content-Length"))
 		}
 	}()
 

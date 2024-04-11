@@ -28,7 +28,7 @@ import (
 )
 
 // InitialCron 初始化定时任务
-func InitialCron(ctx context.Context) {
+func InitialCron(ctx context.Context) {	
 	c := cron.New(cron.WithSeconds())
 	cronEntries := make(map[string]cron.EntryID)
 	entryId, err := c.AddFunc("0 0 2 * * *", cronWrapper("MultipartUploadCleaner", MultipartUploadCleaner))
