@@ -22,18 +22,18 @@ import (
 func initWebRoute(r *gin.RouterGroup) {
 	// 文件接口
 	upload := &api.FileAPI{}
-	uploadGroup := r.Group("/file")
-	uploadGroup.POST("/initialUpload", filter.AntiShakeFilter, upload.InitialUpload)
-	uploadGroup.PATCH("/uploadPart", upload.UploadPart)
-	uploadGroup.POST("/mergePart", filter.AntiShakeFilter, upload.MergePart)
+	uploadGroup := r.Group("/file", filter.WebAuthFilter)
+	uploadGroup.POST("/initialUpload", filter.AntiShakeFilter, filter.AuthenticateFilter, upload.InitialUpload)
+	uploadGroup.PATCH("/uploadPart", filter.AuthenticateFilter, upload.UploadPart)
+	uploadGroup.POST("/mergePart", filter.AntiShakeFilter, filter.AuthenticateFilter, upload.MergePart)
 
 	// 用户管理模块
 	user := &api.UserApi{}
-	userGroup := r.Group("/user", filter.AntiShakeFilter)
-	userGroup.POST("/register", user.Register)
-	userGroup.POST("/login", user.Login)
-	userGroup.DELETE("/logout", user.Logout)
-	userGroup.PUT("/updateInfo", user.UpdateInfo)
-	userGroup.POST("/changePasswd", user.ChangePasswd)
-	userGroup.GET("/info", user.Info)
+	userGroup := r.Group("/user")
+	userGroup.POST("/register", filter.TransactionFilter, user.Register)
+	userGroup.POST("/login", filter.WebAuthFilter, filter.AntiShakeFilter, filter.AuthenticateFilter, user.Login)
+	userGroup.DELETE("/logout", filter.WebAuthFilter, filter.AntiShakeFilter, filter.AuthenticateFilter, user.Logout)
+	userGroup.PUT("/updateInfo", filter.WebAuthFilter, filter.AntiShakeFilter, filter.AuthenticateFilter, user.UpdateInfo)
+	userGroup.POST("/changePasswd", filter.WebAuthFilter, filter.AntiShakeFilter, filter.AuthenticateFilter, user.ChangePasswd)
+	userGroup.GET("/info", filter.WebAuthFilter, filter.AntiShakeFilter, filter.AuthenticateFilter, user.Info)
 }

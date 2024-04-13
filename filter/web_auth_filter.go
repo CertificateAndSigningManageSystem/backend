@@ -14,6 +14,7 @@ package filter
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -49,7 +50,8 @@ func WebAuthFilter(c *gin.Context) {
 	}
 
 	// 获取会话信息
-	sessionStr, err := conn.GetRedisClient(ctx).Get(ctx, sessionCookie.Value).Result()
+	sessionStr, err := conn.GetRedisClient(ctx).Get(
+		ctx, fmt.Sprintf(conn.CacheKey_UserSession, sessionCookie.Value)).Result()
 	if err != nil {
 		c.Abort()
 		if errors.Is(err, redis.Nil) {

@@ -77,7 +77,7 @@ func APIAuthFilter(c *gin.Context) {
 	token := c.Request.Header.Get("Authorization")
 	if len(token) <= 5 {
 		c.Abort()
-		util.FailByErr(c, errs.ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNoAuth)
 		return
 	}
 	token = token[5:]
@@ -98,7 +98,7 @@ func APIAuthFilter(c *gin.Context) {
 			return nil, err
 		}
 		if authInfo.Id <= 0 {
-			return nil, errs.ErrNeedAuth
+			return nil, errs.ErrNoAuth
 		}
 		return []byte(authInfo.Secret), nil
 	})
@@ -114,22 +114,22 @@ func APIAuthFilter(c *gin.Context) {
 	case !res.Valid:
 		log.Warn(ctx, "api token invalid", token)
 		c.Abort()
-		util.FailByErr(c, errs.ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNoAuth)
 		return
 	case errors.Is(err, jwt.ErrTokenMalformed):
 		log.Warn(ctx, "api token malformed", token)
 		c.Abort()
-		util.FailByErr(c, errs.ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNoAuth)
 		return
 	case errors.Is(err, jwt.ErrTokenSignatureInvalid):
 		log.Warn(ctx, "api token sign invalid", token)
 		c.Abort()
-		util.FailByErr(c, errs.ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNoAuth)
 		return
 	case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
 		log.Warn(ctx, "api token expire", token)
 		c.Abort()
-		util.FailByErr(c, errs.ErrNeedAuth)
+		util.FailByErr(c, errs.ErrNoAuth)
 		return
 	}
 	// 是否授权过期

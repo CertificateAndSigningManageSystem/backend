@@ -10,24 +10,13 @@
  * See the Mulan PSL v2 for more details.
  */
 
-package filter
+package protocol
 
-import (
-	"fmt"
+import "mime/multipart"
 
-	"github.com/gin-gonic/gin"
-
-	"gitee.com/CertificateAndSigningManageSystem/common/log"
-	"gitee.com/CertificateAndSigningManageSystem/common/util"
-)
-
-// Recover 恐慌恢复过滤器
-func Recover(c *gin.Context) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Errorf(c.Request.Context(), "handle request panic %v %s", err, log.GetStack())
-			util.FailByErr(c, fmt.Errorf("%v", err))
-		}
-	}()
-	c.Next()
+type RegisterReq struct {
+	NameZh   string                `json:"nameZh"`
+	NameEn   string                `json:"nameEn"`
+	Avatar   *multipart.FileHeader `json:"avatar"`
+	Password string                `json:"password"`
 }

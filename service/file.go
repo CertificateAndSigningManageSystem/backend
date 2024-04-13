@@ -387,3 +387,16 @@ func CleanMultipartUpload(ctx context.Context) error {
 
 	return nil
 }
+
+// CreateFile 数据库新增文件信息实体
+func CreateFile(ctx context.Context, f *TFile) error {
+	err := conn.GetMySQLClient(ctx).Create(f).Error
+	if err != nil {
+		log.ErrorIf(ctx, conn.GetMySQLClient(ctxs.CloneCtx(ctx)).Table(f.TableName()).AutoMigrate(&TFile{}))
+		err = conn.GetMySQLClient(ctx).Create(f).Error
+		if err != nil {
+			return errs.NewSystemBusyErr(err)
+		}
+	}
+	return nil
+}
