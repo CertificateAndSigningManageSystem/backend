@@ -19,7 +19,7 @@ import (
 )
 
 func initAPIRoute(r *gin.RouterGroup) {
-	upload := &api.UploadAPI{}
+	upload := &api.FileAPI{}
 	uploadGroup := r.Group("/upload")
 	uploadGroup.POST("/initialUpload", upload.InitialUpload)
 	uploadGroup.PATCH("/uploadPart", upload.UploadPart)

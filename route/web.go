@@ -21,8 +21,8 @@ import (
 
 func initWebRoute(r *gin.RouterGroup) {
 	// 文件接口
-	upload := &api.UploadAPI{}
-	uploadGroup := r.Group("/upload")
+	upload := &api.FileAPI{}
+	uploadGroup := r.Group("/file")
 	uploadGroup.POST("/initialUpload", filter.AntiShakeFilter, upload.InitialUpload)
 	uploadGroup.PATCH("/uploadPart", upload.UploadPart)
 	uploadGroup.POST("/mergePart", filter.AntiShakeFilter, upload.MergePart)

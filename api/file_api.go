@@ -25,8 +25,8 @@ import (
 	"backend/service"
 )
 
-// UploadAPI 文件分片上传接口
-type UploadAPI struct{}
+// FileAPI 文件分片上传接口
+type FileAPI struct{}
 
 // InitialUpload godoc
 //
@@ -37,8 +37,8 @@ type UploadAPI struct{}
 //	@Param		Authorization	header		string						true	"jwt凭证"
 //	@Param		reqBody			body		protocol.InitialUploadReq	true	"reqBody"
 //	@Success	200				{object}	protocol.InitialUploadRsp
-//	@Router		/api/upload/initialUpload [post]
-func (*UploadAPI) InitialUpload(c *gin.Context) {
+//	@Router		/api/file/initialUpload [post]
+func (*FileAPI) InitialUpload(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取请求参数
@@ -70,8 +70,8 @@ func (*UploadAPI) InitialUpload(c *gin.Context) {
 //	@Param		fileId			formData	string	true	"分片序号"
 //	@Param		chunkNum		formData	integer	true	"文件Id"
 //	@Success	200				{object}	nil
-//	@Router		/api/upload/uploadPart [patch]
-func (*UploadAPI) UploadPart(c *gin.Context) {
+//	@Router		/api/file/uploadPart [patch]
+func (*FileAPI) UploadPart(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取请求参数
@@ -130,8 +130,8 @@ func (*UploadAPI) UploadPart(c *gin.Context) {
 //	@Param		Authorization	header		string	true	"jwt凭证"
 //	@Param		fileId			body		string	true	"文件Id"
 //	@Success	200				{object}	nil
-//	@Router		/api/upload/mergePart [post]
-func (*UploadAPI) MergePart(c *gin.Context) {
+//	@Router		/api/file/mergePart [post]
+func (*FileAPI) MergePart(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取参数
