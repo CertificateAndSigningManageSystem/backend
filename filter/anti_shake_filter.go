@@ -35,13 +35,13 @@ local key = 'anti:shake:hash';
 local field = KEYS[1]..KEYS[2];
 -- 获取当前时间
 local nowArr = redis.call('time');
-local curAccessTime = tonumber(nowArr[1]) * 1000);
+local curAccessTime = tonumber(nowArr[1] * 1000);
 -- 获取用户该请求的上次请求时间
 local lastAccessTime = tonumber(redis.call('hget', key, field) or 0);
 -- 比较与本次请求时间
 local delta = curAccessTime - lastAccessTime;
 local limit = tonumber(ARGV[1] or 0);
-if (delta >= 0 and delta < limit) or (delta < 0 and delta > -limit) then
+if (delta >= 0 and delta < limit) or (delta < 0 and delta > -limit) then 
 	return 0;
 end
 -- 通过校验更新时间值

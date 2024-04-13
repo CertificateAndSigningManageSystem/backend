@@ -15,12 +15,19 @@ package main
 import (
 	_ "backend/docs"
 
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 
 	"backend/conf"
 	"backend/cron"
+	"backend/filter"
 	"backend/route"
 )
 
@@ -39,9 +46,24 @@ func init() {
 }
 
 func main() {
-	ctx := ctxs.NewCtx("main")
+	ctx, cancel := context.WithCancel(ctxs.NewCtx("main"))
 	router := route.InitialRouter(ctx)
-	log.Info(ctx, "start serve 启动服务")
-	log.ErrorIf(ctx, router.Run(conf.Conf.ServeAddr))
-	log.Warn(ctx, "exit serve 退出服务")
+	log.Info(ctx, "start serve")
+	go func() {
+		router.Use(filter.ExitFilter(ctx))
+		log.ErrorIf(ctx, router.Run(conf.Conf.ServeAddr))
+	}()
+
+	// 监听关闭信号
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGSEGV, syscall.SIGUSR2)
+	<-ch
+	log.Warn(ctx, "exiting server")
+	cancel()
+	time.Sleep(3 * time.Second)
+	cron.CloseCron(ctx)
+	conn.CloseRabbitMQClient(ctx)
+	conn.CloseMysqlClient(ctx)
+	conn.CloseRedisClient(ctx)
+	log.Info(ctx, "server exit")
 }

@@ -27,17 +27,24 @@ import (
 	"backend/service"
 )
 
+var c *cron.Cron
+
 // InitialCron 初始化定时任务
 func InitialCron(ctx context.Context) {
-	c := cron.New(cron.WithSeconds())
+	c = cron.New(cron.WithSeconds())
 	cronEntries := make(map[string]cron.EntryID)
 	entryId, err := c.AddFunc("0 0 2 * * *", cronWrapper("MultipartUploadCleaner", MultipartUploadCleaner))
 	if err != nil {
 		log.Fatal(ctx, err)
 	}
 	cronEntries["MultipartUploadCleaner"] = entryId
-	c.Run()
+	c.Start()
 	log.Info(ctx, "init cron success")
+}
+
+// CloseCron 关闭定时任务
+func CloseCron(ctx context.Context) {
+	<-c.Stop().Done()
 }
 
 // MultipartUploadCleaner 定时清理分片文件上传异常数据
