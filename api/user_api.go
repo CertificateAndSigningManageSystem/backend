@@ -21,6 +21,7 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
+	"backend/consts"
 	"backend/protocol"
 	"backend/service"
 )
@@ -74,7 +75,7 @@ func (*UserApi) Register(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("csms_session", session, 0, "", "", false, true)
+	c.SetCookie(consts.SessionKey, session, 0, "", "", false, true)
 	util.SuccessMsg(c, "注册成功")
 }
 
@@ -90,19 +91,32 @@ func (*UserApi) Login(c *gin.Context) {
 		return
 	}
 
+	// 调用下游
 	session, err := service.Login(ctx, &req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
 	}
 
-	c.SetCookie("csms_session", session, 0, "", "", false, true)
+	c.SetCookie(consts.SessionKey, session, 0, "", "", false, true)
 	util.SuccessMsg(c, "登陆成功")
 }
 
 // Logout 登出
 func (*UserApi) Logout(c *gin.Context) {
+	ctx := c.Request.Context()
 
+	// 获取会话
+	session, _ := c.Cookie(consts.SessionKey)
+
+	// 调用下游
+	err := service.Logout(ctx, session)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.SuccessMsg(c, "登出成功")
 }
 
 // UpdateInfo 更新个人信息

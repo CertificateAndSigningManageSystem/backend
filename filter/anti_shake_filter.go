@@ -14,6 +14,7 @@ package filter
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -22,6 +23,7 @@ import (
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
+	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 )
@@ -67,16 +69,22 @@ func AntiShakeFilter(c *gin.Context) {
 
 	// 获取并校验请求时间
 	date := c.Request.Header.Get("Date")
-	reqDate, err := time.Parse("Mon, 02 Jan 2006 15:04:05 GMT", date)
+	reqDate, err := time.ParseInLocation("Mon, 02 Jan 2006 15:04:05 GMT", date, time.Local)
 	if err != nil {
 		c.Abort()
-		util.Fail(c, http.StatusBadRequest, "unknown request date")
+		util.FailByErr(c, &errs.Error{
+			HTTPStatus: http.StatusBadRequest,
+			WrappedErr: err,
+		})
 		return
 	}
 	// 请求时间超时
 	if since := time.Since(reqDate); since > antiShakeMaxPeriod || since < 0 {
 		c.Abort()
-		util.Fail(c, http.StatusPreconditionFailed, "request timeout")
+		util.FailByErr(c, &errs.Error{
+			HTTPStatus: http.StatusBadRequest,
+			WrappedErr: fmt.Errorf("since is %v", since),
+		})
 		return
 	}
 
@@ -87,14 +95,14 @@ func AntiShakeFilter(c *gin.Context) {
 		[]string{strconv.Itoa(int(userId)), reqPath}, antiShakeMinPeriod.Milliseconds()).Bool()
 	if err != nil {
 		c.Abort()
-		log.Error(ctx, "exec redis anti shake script error", err)
-		util.Fail(c, http.StatusInternalServerError, "system busy")
+		log.Error(ctx, err)
+		util.FailByErr(c, errs.NewSystemBusyErr(err))
 		return
 	}
 	// 丢掉请求
 	if !b {
 		c.Abort()
-		util.Fail(c, http.StatusTooManyRequests, "too many requests")
+		util.Fail(c, http.StatusTooManyRequests, "请求频繁")
 		return
 	}
 

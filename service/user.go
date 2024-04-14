@@ -57,32 +57,6 @@ type sessionCache struct {
 	LoginIP string `json:"loginIP"`
 }
 
-// GetSessionInfo 获取会话信息
-func GetSessionInfo(ctx context.Context, session string) (*SessionInfo, error) {
-	// 反序列数据
-	var data sessionCache
-	err := json.Unmarshal([]byte(session), &data)
-	if err != nil {
-		log.Error(ctx, "json unmarshal error", err, session)
-		return &SessionInfo{}, errs.NewSystemBusyErr(err)
-	}
-
-	// 查库
-	userInfo, err := GetUserInfoById(ctx, data.UserId)
-	if err != nil {
-		return &SessionInfo{}, err
-	}
-	if userInfo.Id <= 0 {
-		log.Warn(ctx, "unknown user", session)
-		return &SessionInfo{}, errs.ErrUnknownUser
-	}
-
-	return &SessionInfo{
-		LoginIP: data.LoginIP,
-		TUser:   userInfo,
-	}, nil
-}
-
 // Register 注册
 func Register(ctx context.Context, req *protocol.RegisterReq) (session string, err error) {
 	// 校验
@@ -218,13 +192,9 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 	}
 
 	// 生成登陆会话信息
-	session = gotools.RandomCharsCaseInsensitive(128)
-	sessionVal, _ := json.Marshal(&sessionCache{
-		UserId:  tuser.Id,
-		LoginIP: ctxs.RequestIP(ctx),
-	})
+	session, sessionVal := CreateUserSession(ctx, tuser.Id, ctxs.RequestIP(ctx))
 	err = conn.GetRedisClient(ctx).SetEx(ctx,
-		fmt.Sprintf(conn.CacheKey_UserSession, session), string(sessionVal), time.Hour*24).Err()
+		fmt.Sprintf(conn.CacheKey_UserSession, session), sessionVal, time.Hour*24).Err()
 	if err != nil {
 		log.Error(ctx, err)
 		return "", errs.NewSystemBusyErr(err)
@@ -275,7 +245,7 @@ func Login(ctx context.Context, req *protocol.LoginReq) (session string, err err
 		Type:      model.TEvent_Type_Login,
 		OccurTime: now,
 		UserId:    tuser.Id,
-		Content:   fmt.Sprintf("用户%s登陆", tuser.NameEn),
+		Content:   fmt.Sprintf("用户%s登陆%s", tuser.NameEn, ctxs.RequestIP(ctx)),
 	}
 	if err = CreateEvent(ctx, tevent); err != nil {
 		log.Error(ctx, err)
@@ -290,19 +260,64 @@ func Login(ctx context.Context, req *protocol.LoginReq) (session string, err err
 	}
 
 	// 记录会话
-	session = gotools.RandomCharsCaseInsensitive(128)
-	sessionVal, _ := json.Marshal(&sessionCache{
-		UserId:  tuser.Id,
-		LoginIP: ctxs.RequestIP(ctx),
-	})
+	session, sessionVal := CreateUserSession(ctx, tuser.Id, ctxs.RequestIP(ctx))
 	err = conn.GetRedisClient(ctx).SetEx(ctx,
-		fmt.Sprintf(conn.CacheKey_UserSession, session), string(sessionVal), time.Hour*24).Err()
+		fmt.Sprintf(conn.CacheKey_UserSession, session), sessionVal, time.Hour*24).Err()
 	if err != nil {
 		log.Error(ctx, err)
 		return "", errs.NewSystemBusyErr(err)
 	}
 
 	return session, nil
+}
+
+// Logout 登出
+func Logout(ctx context.Context, session string) error {
+	// 删除会话缓存
+	err := conn.GetRedisClient(ctx).Del(ctx, fmt.Sprintf(conn.CacheKey_UserSession, session)).Err()
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	return nil
+}
+
+// GetUserSessionInfo 获取会话信息
+func GetUserSessionInfo(ctx context.Context, session string) (*SessionInfo, error) {
+	// 反序列数据
+	var data sessionCache
+	err := json.Unmarshal([]byte(session), &data)
+	if err != nil {
+		log.Error(ctx, err, session)
+		return &SessionInfo{}, errs.NewSystemBusyErr(err)
+	}
+
+	// 查库
+	userInfo, err := GetUserInfoById(ctx, data.UserId)
+	if err != nil {
+		return &SessionInfo{}, err
+	}
+	if userInfo.Id <= 0 {
+		log.Warn(ctx, "unknown user", session)
+		return &SessionInfo{}, errs.ErrUnknownUser
+	}
+
+	return &SessionInfo{
+		LoginIP: data.LoginIP,
+		TUser:   userInfo,
+	}, nil
+}
+
+// CreateUserSession 创建用户会话
+func CreateUserSession(ctx context.Context, uid uint, ip string) (session, sessionVal string) {
+	session = gotools.RandomCharsCaseInsensitive(128)
+	bs, _ := json.Marshal(&sessionCache{
+		UserId:  uid,
+		LoginIP: ip,
+	})
+	sessionVal = string(bs)
+	return
 }
 
 // IsValidPassword 密码字符是否合法

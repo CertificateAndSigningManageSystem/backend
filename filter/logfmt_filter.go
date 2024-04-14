@@ -39,6 +39,9 @@ func LogfmtFilter(c *gin.Context) {
 	reqPath := strings.ToLower(c.Request.URL.Path)
 	ctx = ctxs.WithRequestPath(ctx, reqPath)
 	ip := c.Request.Header.Get("X-Real-IP")
+	if len(ip) <= 0 {
+		ip = c.ClientIP()
+	}
 	ctx = ctxs.WithRequestIP(ctx, ip)
 	c.Request = c.Request.WithContext(ctx)
 

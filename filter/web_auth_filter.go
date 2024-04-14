@@ -27,24 +27,25 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
+	"backend/consts"
 	"backend/service"
 )
 
 // WebAuthFilter Web接口会话鉴权
 func WebAuthFilter(c *gin.Context) {
 	ctx := c.Request.Context()
-	ip := c.Request.Header.Get("X-Real-IP")
+	ip := ctxs.RequestIP(ctx)
 
 	// 获取会话
-	sessionCookie, err := c.Request.Cookie("csms_session")
+	sessionCookie, err := c.Request.Cookie(consts.SessionKey)
 	if err != nil {
 		c.Abort()
 		// 不存在会话凭证
 		if errors.Is(err, http.ErrNoCookie) {
-			util.Fail(c, http.StatusUnauthorized, "please login first")
+			util.Fail(c, http.StatusUnauthorized, "请先登陆")
 		} else {
-			log.Error(ctx, "obtain cookie error", err)
-			util.Fail(c, http.StatusInternalServerError, "system busy")
+			log.Error(ctx, err)
+			util.FailByErr(c, errs.NewSystemBusyErr(err))
 		}
 		return
 	}
@@ -55,14 +56,14 @@ func WebAuthFilter(c *gin.Context) {
 	if err != nil {
 		c.Abort()
 		if errors.Is(err, redis.Nil) {
-			util.Fail(c, http.StatusUnauthorized, "please login first")
+			util.Fail(c, http.StatusUnauthorized, "请先登陆")
 		} else {
-			log.Error(ctx, "obtain redis key error", err)
-			util.Fail(c, http.StatusInternalServerError, "system busy")
+			log.Error(ctx, err)
+			util.FailByErr(c, errs.NewSystemBusyErr(err))
 		}
 		return
 	}
-	session, err := service.GetSessionInfo(ctx, sessionStr)
+	session, err := service.GetUserSessionInfo(ctx, sessionStr)
 	if err != nil {
 		c.Abort()
 		// 删除非法会话
@@ -76,12 +77,12 @@ func WebAuthFilter(c *gin.Context) {
 	// 校验状态和IP
 	if session.TUser.Status != model.TUser_Status_OK {
 		c.Abort()
-		util.Fail(c, http.StatusForbidden, "locked user")
+		util.Fail(c, http.StatusForbidden, "账号已锁定")
 		return
 	}
 	if session.LoginIP != ip {
 		c.Abort()
-		util.Fail(c, http.StatusUnauthorized, "illegal access")
+		util.Fail(c, http.StatusUnauthorized, "请先登陆")
 		return
 	}
 
