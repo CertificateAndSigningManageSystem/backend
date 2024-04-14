@@ -15,6 +15,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,7 +32,7 @@ const (
 // GenerateId 生成唯一id
 func GenerateId(ctx context.Context, scope string) (string, error) {
 	for {
-		id := time.Now().Format("200601") + uuid.NewString()
+		id := strings.ReplaceAll(time.Now().Format("200601")+uuid.NewString(), "-", "")
 		result, err := conn.GetRedisClient(ctx).SAdd(ctx, fmt.Sprintf(conn.CacheKey_GenIdFmt, scope), id).Result()
 		if err != nil {
 			log.Error(ctx, err)

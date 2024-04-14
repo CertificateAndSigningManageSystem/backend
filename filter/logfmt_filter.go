@@ -32,7 +32,7 @@ import (
 // LogfmtFilter 日志过滤器
 func LogfmtFilter(c *gin.Context) {
 	// 组装上下信息
-	rid := c.Request.Header.Get("X-CSMS-Request-Id")
+	rid := c.Request.Header.Get("X-Csms-Request-Id")
 	if len(rid) <= 0 {
 		rid = strings.ReplaceAll(uuid.New().String(), "-", "")
 	}
@@ -40,7 +40,7 @@ func LogfmtFilter(c *gin.Context) {
 	reqPath := strings.ToLower(c.Request.URL.Path)
 	ctx = ctxs.WithRequestPath(ctx, reqPath)
 	ip := c.Request.Header.Get("X-Real-IP")
-	ctx = ctxs.WithRequestId(ctx, ip)
+	ctx = ctxs.WithRequestIP(ctx, ip)
 	c.Request = c.Request.WithContext(ctx)
 
 	// 打印请求信息
@@ -61,7 +61,7 @@ func LogfmtFilter(c *gin.Context) {
 	defer func() {
 		cost := time.Since(now)
 		ctx = c.Request.Context()
-		msg := c.Writer.Header().Get("X-CSMS-Error-Message")
+		msg := c.Writer.Header().Get("X-Csms-Error-Message")
 		msg, err := url.QueryUnescape(msg)
 		if err == nil && len(msg) > 0 {
 			log.Warn(ctx, "END PROCESS",

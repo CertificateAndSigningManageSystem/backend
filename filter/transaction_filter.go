@@ -34,8 +34,8 @@ func TransactionFilter(c *gin.Context) {
 	c.Next()
 
 	ctx = c.Request.Context()
-	// 检查响应头判断是否提交事务
-	if len(c.Writer.Header().Get("X-CSMS-Error-Message")) > 0 {
+	// 检查是否提交事务
+	if len(ctxs.ErrMsg(ctx)) > 0 {
 		// 回滚事务
 		log.ErrorIf(ctx, tx.Rollback().Error)
 	} else {

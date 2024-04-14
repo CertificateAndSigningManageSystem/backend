@@ -13,8 +13,8 @@
 package service
 
 import (
-	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
-	"gitee.com/ivfzhou/tus_client"
+	"errors"
+	"github.com/go-sql-driver/mysql"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -34,8 +34,10 @@ import (
 	"unicode"
 
 	"gitee.com/ivfzhou/gotools/v4"
+	"gitee.com/ivfzhou/tus_client"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
+	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
@@ -144,9 +146,21 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 		log.Warn(ctx, err)
 		return "", errs.NewParamsErrMsg("头像格式内容错误")
 	}
-	if !strings.EqualFold(imgFmt, fileExt) {
+	if !strings.EqualFold("."+imgFmt, fileExt) {
 		return "", errs.NewParamsErrMsg("头像格式名错误")
 	}
+
+	// 生成头像文件Id
+	fileId, err := GenerateId(ctx, IdScope_File)
+	if err != nil {
+		log.Error(ctx, err)
+		return "", err
+	}
+	defer func() {
+		if err != nil {
+			log.ErrorIf(ctx, ReclaimId(ctx, IdScope_File, fileId))
+		}
+	}()
 
 	// 组装数据库实体
 	now := time.Now()
@@ -157,6 +171,7 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 		RegisterTime:  now,
 		LastLoginTime: now,
 		Status:        model.TUser_Status_OK,
+		Avatar:        fileId,
 	}
 
 	// 计算密码散列值
@@ -165,6 +180,10 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 
 	// 用户信息落库
 	if err = conn.GetMySQLClient(ctx).Create(tuser).Error; err != nil {
+		var e *mysql.MySQLError
+		if errors.As(err, &e) && e.Number == 1062 {
+			return "", errs.NewParamsErrMsg("该用户已注册")
+		}
 		log.Error(ctx, err)
 		return "", errs.NewSystemBusyErr(err)
 	}
@@ -185,16 +204,6 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 	}()
 
 	// 文件信息落库
-	fileId, err := GenerateId(ctx, IdScope_File)
-	if err != nil {
-		log.Error(ctx, err)
-		return "", err
-	}
-	defer func() {
-		if err != nil {
-			log.ErrorIf(ctx, ReclaimId(ctx, IdScope_File, fileId))
-		}
-	}()
 	_md5, _sha1, _sha256 := util.CalcSum(fileData)
 	tfile := &model.TFile{
 		FileId:     fileId,
