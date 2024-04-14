@@ -20,3 +20,8 @@ type RegisterReq struct {
 	Avatar   *multipart.FileHeader `json:"avatar"`
 	Password string                `json:"password"`
 }
+
+type LoginReq struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}

@@ -16,7 +16,6 @@ import (
 	"bytes"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -61,9 +60,8 @@ func LogfmtFilter(c *gin.Context) {
 	defer func() {
 		cost := time.Since(now)
 		ctx = c.Request.Context()
-		msg := c.Writer.Header().Get("X-Csms-Error-Message")
-		msg, err := url.QueryUnescape(msg)
-		if err == nil && len(msg) > 0 {
+		msg := ctxs.ErrMsg(ctx)
+		if len(msg) > 0 {
 			log.Warn(ctx, "END PROCESS",
 				cost, c.Writer.Status(), http.StatusText(c.Writer.Status()),
 				c.Writer.Header().Get("Content-Length"), msg)

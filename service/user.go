@@ -92,27 +92,10 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 	if len(req.NameZh) > 32 {
 		return "", errs.NewParamsErrMsg("中文名过长")
 	}
-	if !util.IsAllLetterCharacters(req.NameEn) {
-		return "", errs.NewParamsErrMsg("英文名应全是字母")
+	if !IsValidUserNameEn(ctx, req.NameEn) {
+		return "", errs.NewParamsErrMsg("英文名应全是字母且不超过16个字符")
 	}
-	if len(req.NameEn) > 16 {
-		return "", errs.NewParamsErrMsg("英文名过长")
-	}
-	hasNum := false
-	hasUpper := false
-	hasLower := false
-	for _, v := range []rune(req.Password) {
-		if unicode.IsUpper(v) {
-			hasUpper = true
-		} else if unicode.IsLower(v) {
-			hasLower = true
-		} else if unicode.IsDigit(v) {
-			hasNum = true
-		} else {
-			return "", errs.NewParamsErrMsg("密码须是字母数字组合")
-		}
-	}
-	if !(hasNum && hasUpper && hasLower && len(req.Password) >= 8) {
+	if !IsValidPassword(ctx, req.Password) {
 		return "", errs.NewParamsErrMsg("密码须是字母数字组合，至少包含三种字符类型，长度不小于八位")
 	}
 	if req.Avatar.Size <= 0 {
@@ -248,4 +231,109 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 	}
 
 	return session, nil
+}
+
+// Login 登陆
+func Login(ctx context.Context, req *protocol.LoginReq) (session string, err error) {
+	// 校验
+	if len(req.Name) <= 0 {
+		return "", errs.NewParamsErrMsg("姓名不能为空")
+	}
+	if len(req.Password) <= 0 {
+		return "", errs.NewParamsErrMsg("密码不能为空")
+	}
+	if !IsValidUserNameEn(ctx, req.Name) {
+		return "", errs.NewParamsErr(nil)
+	}
+	if !IsValidPassword(ctx, req.Password) {
+		return "", errs.NewParamsErr(nil)
+	}
+
+	// 查库
+	var tuser model.TUser
+	err = conn.GetMySQLClient(ctx).Where("name_en = ?", req.Name).Find(&tuser).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return "", errs.NewSystemBusyErr(err)
+	}
+	if tuser.Id <= 0 {
+		return "", errs.NewParamsErrMsg("用户不存在")
+	}
+	if tuser.Status != model.TUser_Status_OK {
+		return "", errs.NewParamsErrMsg("禁止登陆")
+	}
+
+	// 计算密码散列
+	md5Sum := md5.Sum([]byte(req.Password + tuser.PasswdSalt))
+	if tuser.PasswdDigest != hex.EncodeToString(md5Sum[:]) {
+		return "", errs.NewParamsErrMsg("密码错误")
+	}
+
+	// 记录事件
+	now := time.Now()
+	tevent := &model.TEvent{
+		Type:      model.TEvent_Type_Login,
+		OccurTime: now,
+		UserId:    tuser.Id,
+		Content:   fmt.Sprintf("用户%s登陆", tuser.NameEn),
+	}
+	if err = CreateEvent(ctx, tevent); err != nil {
+		log.Error(ctx, err)
+		return "", errs.NewSystemBusyErr(err)
+	}
+
+	// 更新最后登陆时间
+	err = conn.GetMySQLClient(ctx).Model(&model.TUser{}).Where("id = ?", tuser.Id).UpdateColumn("last_login_time", now).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return "", errs.NewSystemBusyErr(err)
+	}
+
+	// 记录会话
+	session = gotools.RandomCharsCaseInsensitive(128)
+	sessionVal, _ := json.Marshal(&sessionCache{
+		UserId:  tuser.Id,
+		LoginIP: ctxs.RequestIP(ctx),
+	})
+	err = conn.GetRedisClient(ctx).SetEx(ctx,
+		fmt.Sprintf(conn.CacheKey_UserSession, session), string(sessionVal), time.Hour*24).Err()
+	if err != nil {
+		log.Error(ctx, err)
+		return "", errs.NewSystemBusyErr(err)
+	}
+
+	return session, nil
+}
+
+// IsValidPassword 密码字符是否合法
+func IsValidPassword(ctx context.Context, passwd string) bool {
+	hasNum := false
+	hasUpper := false
+	hasLower := false
+	for _, v := range []rune(passwd) {
+		if unicode.IsUpper(v) {
+			hasUpper = true
+		} else if unicode.IsLower(v) {
+			hasLower = true
+		} else if unicode.IsDigit(v) {
+			hasNum = true
+		} else {
+			return false
+		}
+	}
+	if !(hasNum && hasUpper && hasLower && len(passwd) >= 8) {
+		return false
+	}
+	return true
+}
+
+// IsValidUserNameEn 英文名字符是否合法
+func IsValidUserNameEn(ctx context.Context, nameEn string) bool {
+	if !util.IsAllLetterCharacters(nameEn) {
+		return false
+	}
+	if len(nameEn) > 16 {
+		return false
+	}
+	return true
 }

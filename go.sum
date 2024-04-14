@@ -2,8 +2,8 @@ gitee.com/ivfzhou/double-array-trie v1.2.0 h1:f6Q6ruorDRaR9kqeWRj1g51RXdSUX4aVmC
 gitee.com/ivfzhou/double-array-trie v1.2.0/go.mod h1:kEpJlh+863Ys043XZm1clBEE97K5JluCUfSKdhglDik=
 gitee.com/ivfzhou/gotools/v4 v4.0.0 h1:icciJiTf2ybIeqdzEwfUeeTeQtFjYoSYbEzlkcD4QiE=
 gitee.com/ivfzhou/gotools/v4 v4.0.0/go.mod h1:xkyqU/VGybdnE/G+nI6dCHpqOWWpW3pXt9XLehAWyq4=
-gitee.com/ivfzhou/tus_client v0.3.0 h1:nsptyhglUj220CmfiTQtGrjX2tBKyPuQQGEdUqGGG7k=
-gitee.com/ivfzhou/tus_client v0.3.0/go.mod h1:4m258k+NTxWxm1P3BuKLeR/x5kB2DumYtMOKb5tGtKo=
+gitee.com/ivfzhou/tus_client v0.4.1 h1:LE735m1yj4rJodgVslcVtAfOY8V/uz0XoLvtrku48IU=
+gitee.com/ivfzhou/tus_client v0.4.1/go.mod h1:4m258k+NTxWxm1P3BuKLeR/x5kB2DumYtMOKb5tGtKo=
 github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc=
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=

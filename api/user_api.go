@@ -80,7 +80,24 @@ func (*UserApi) Register(c *gin.Context) {
 
 // Login 登录
 func (*UserApi) Login(c *gin.Context) {
+	ctx := c.Request.Context()
 
+	// 获取请求参数
+	var req protocol.LoginReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		util.FailByErr(c, errs.NewParamsErr(err))
+		return
+	}
+
+	session, err := service.Login(ctx, &req)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	c.SetCookie("csms_session", session, 0, "", "", false, true)
+	util.SuccessMsg(c, "登陆成功")
 }
 
 // Logout 登出

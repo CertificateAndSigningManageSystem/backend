@@ -17,6 +17,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 )
@@ -26,7 +27,7 @@ func Recover(c *gin.Context) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf(c.Request.Context(), "handle request panic %v %s", err, log.GetStack())
-			util.FailByErr(c, fmt.Errorf("%v", err))
+			util.FailByErr(c, errs.NewSystemBusyErr(fmt.Errorf("%v", err)))
 		}
 	}()
 	c.Next()

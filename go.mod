@@ -18,8 +18,10 @@ require (
 	gitee.com/CertificateAndSigningManageSystem/common v0.0.0-20240316090304-6eeff768e8f1
 	gitee.com/ivfzhou/double-array-trie v1.2.0
 	gitee.com/ivfzhou/gotools/v4 v4.0.0
+	gitee.com/ivfzhou/tus_client v0.4.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-ini/ini v1.67.0
+	github.com/go-sql-driver/mysql v1.7.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/ivfzhou/cron/v3 v3.1.0
@@ -30,7 +32,6 @@ require (
 )
 
 require (
-	gitee.com/ivfzhou/tus_client v0.3.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
@@ -47,7 +48,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
-	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
