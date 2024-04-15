@@ -63,7 +63,7 @@ func WebAuthFilter(c *gin.Context) {
 
 	// 获取会话信息
 	session, err := conn.GetRedisClient(ctx).Get(
-		ctx, fmt.Sprintf(conn.CacheKey_UserSessionFmt, skey, user)).Result()
+		ctx, fmt.Sprintf(conn.CacheKey_UserSessionFmt, user, skey)).Result()
 	if err != nil {
 		c.Abort()
 		if errors.Is(err, redis.Nil) {
@@ -82,6 +82,11 @@ func WebAuthFilter(c *gin.Context) {
 		c.Abort()
 		log.Error(ctx, err, session)
 		util.FailByErr(c, errs.NewSystemBusyErr(err))
+		return
+	}
+	if data.UserId <= 0 {
+		c.Abort()
+		util.FailByErr(c, errs.ErrNeedLogin)
 		return
 	}
 
