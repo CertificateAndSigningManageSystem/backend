@@ -309,6 +309,31 @@ func Logout(ctx context.Context, user, session string) error {
 	return nil
 }
 
+// GetUserInfo 获取用户信息
+func GetUserInfo(ctx context.Context) (*protocol.UserInfoRsp, error) {
+	userId := ctxs.UserId(ctx)
+	if userId <= 0 {
+		return &protocol.UserInfoRsp{}, nil
+	}
+
+	// 查库
+	var tuser model.TUser
+	err := conn.GetMySQLClient(ctx).Where("id = ?", userId).Find(&tuser).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, errs.NewSystemBusyErr(err)
+	}
+
+	// 处理数据
+	res := &protocol.UserInfoRsp{
+		NameEn: tuser.NameEn,
+		Avatar: tuser.Avatar,
+		NameZh: tuser.NameZh,
+	}
+
+	return res, nil
+}
+
 // IsValidPassword 密码字符是否合法
 func IsValidPassword(_ context.Context, passwd string) bool {
 	hasNum := false

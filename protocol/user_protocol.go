@@ -27,3 +27,9 @@ type LoginReq struct {
 	Password  string `json:"password"`
 	UserAgent string `json:"userAgent"`
 }
+
+type UserInfoRsp struct {
+	NameEn string `json:"nameEn"`
+	Avatar string `json:"avatar"`
+	NameZh string `json:"nameZh"`
+}

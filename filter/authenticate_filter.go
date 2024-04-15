@@ -13,12 +13,11 @@
 package filter
 
 import (
-	"net/http"
-
 	double_array_trie "gitee.com/ivfzhou/double-array-trie"
 	"github.com/gin-gonic/gin"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
+	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
 	"backend/service"
@@ -58,13 +57,13 @@ func AuthenticateFilter(c *gin.Context) {
 		userInfo, err := service.GetUserInfoById(ctx, userId)
 		if err != nil {
 			c.Abort()
-			util.Fail(c, http.StatusInternalServerError, "system busy")
+			util.FailByErr(c, errs.NewSystemBusyErr(err))
 			return
 		}
 		// 用户不存在，则限制请求
 		if userInfo.Id <= 0 {
 			c.Abort()
-			util.Fail(c, http.StatusForbidden, "request restricted")
+			util.FailByErr(c, errs.ErrIllegalRequest)
 			return
 		}
 		// 获取需要的权限项
@@ -76,13 +75,13 @@ func AuthenticateFilter(c *gin.Context) {
 			has, err := service.HasUserAnyAuthorities(ctx, userId, authorities...)
 			if err != nil {
 				c.Abort()
-				util.Fail(c, http.StatusInternalServerError, "system busy")
+				util.FailByErr(c, errs.NewSystemBusyErr(err))
 				return
 			}
 			// 无权，限制请求
 			if !has {
 				c.Abort()
-				util.Fail(c, http.StatusForbidden, "request restricted")
+				util.FailByErr(c, errs.ErrNoAuth)
 				return
 			}
 		}
@@ -93,13 +92,13 @@ func AuthenticateFilter(c *gin.Context) {
 		authInfo, err := service.GetAuthInfoById(ctx, authId)
 		if err != nil {
 			c.Abort()
-			util.Fail(c, http.StatusInternalServerError, "system busy")
+			util.FailByErr(c, errs.NewSystemBusyErr(err))
 			return
 		}
 		// 凭证不存在，则限制请求
 		if authInfo.Id <= 0 {
 			c.Abort()
-			util.Fail(c, http.StatusForbidden, "request restricted")
+			util.FailByErr(c, errs.ErrNoAuth)
 			return
 		}
 		// 获取需要的权限项
@@ -111,13 +110,13 @@ func AuthenticateFilter(c *gin.Context) {
 			has, err := service.HasAuthAnyAuthorities(ctx, authId, authorities...)
 			if err != nil {
 				c.Abort()
-				util.Fail(c, http.StatusInternalServerError, "system busy")
+				util.FailByErr(c, errs.NewSystemBusyErr(err))
 				return
 			}
 			// 无权，限制请求
 			if !has {
 				c.Abort()
-				util.Fail(c, http.StatusForbidden, "request restricted")
+				util.FailByErr(c, errs.ErrNoAuth)
 				return
 			}
 		}

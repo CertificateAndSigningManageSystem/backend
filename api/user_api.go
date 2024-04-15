@@ -122,6 +122,20 @@ func (*UserApi) Logout(c *gin.Context) {
 	util.SuccessMsg(c, "登出成功")
 }
 
+// Info 获取个人信息
+func (*UserApi) Info(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// 调用下游
+	rsp, err := service.GetUserInfo(ctx)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.Success(c, rsp)
+}
+
 // UpdateInfo 更新个人信息
 func (*UserApi) UpdateInfo(c *gin.Context) {
 
@@ -129,10 +143,5 @@ func (*UserApi) UpdateInfo(c *gin.Context) {
 
 // ChangePasswd 修改密码
 func (*UserApi) ChangePasswd(c *gin.Context) {
-
-}
-
-// Info 获取个人信息
-func (*UserApi) Info(c *gin.Context) {
 
 }

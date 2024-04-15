@@ -24,16 +24,17 @@ import (
 	"time"
 
 	"gitee.com/ivfzhou/gotools/v4"
+	"gitee.com/ivfzhou/tus_client"
 	"github.com/redis/go-redis/v9"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
-	. "gitee.com/CertificateAndSigningManageSystem/common/model"
+	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
-	. "backend/protocol"
+	"backend/protocol"
 )
 
 type fileInfo struct {
@@ -48,14 +49,14 @@ type fileInfo struct {
 }
 
 // InitialUpload 初始化分片上传
-func InitialUpload(ctx context.Context, req *InitialUploadReq) (*InitialUploadRsp, error) {
+func InitialUpload(ctx context.Context, req *protocol.InitialUploadReq) (*protocol.InitialUploadRsp, error) {
 	// 校验参数
 	if len(req.SHA1) <= 0 || len(req.SHA256) <= 0 || len(req.MD5) <= 0 || len(req.Name) <= 0 || req.Size <= 0 {
 		return nil, errs.NewParamsErr(nil)
 	}
 
 	// 查询数据库
-	var file TFile
+	var file model.TFile
 	err := conn.GetMySQLClient(ctx).Where("name = ? and md5 = ? and sha1 = ? and sha256 = ? and size = ?",
 		req.Name, req.MD5, req.SHA1, req.SHA256, req.Size).Find(&file).Error
 	if err != nil {
@@ -64,7 +65,7 @@ func InitialUpload(ctx context.Context, req *InitialUploadReq) (*InitialUploadRs
 	}
 	if file.Id > 0 {
 		// 存在，不必上传
-		return &InitialUploadRsp{
+		return &protocol.InitialUploadRsp{
 			Id:     file.FileId,
 			Exists: true,
 		}, nil
@@ -97,13 +98,13 @@ func InitialUpload(ctx context.Context, req *InitialUploadReq) (*InitialUploadRs
 		return nil, errs.NewParamsErr(err)
 	}
 
-	return &InitialUploadRsp{
+	return &protocol.InitialUploadRsp{
 		Id: file.FileId,
 	}, nil
 }
 
 // UploadPart 上传分片
-func UploadPart(ctx context.Context, req *UploadPartReq) error {
+func UploadPart(ctx context.Context, req *protocol.UploadPartReq) error {
 	// 校验参数
 	if req.Chunk == nil || req.ChunkSize <= 0 || req.ChunkNum <= 0 || len(req.FileId) <= 0 {
 		return errs.NewParamsErr(nil)
@@ -183,7 +184,7 @@ func UploadPart(ctx context.Context, req *UploadPartReq) error {
 }
 
 // MergePart 合并分片文件
-func MergePart(ctx context.Context, req *MergePartReq) error {
+func MergePart(ctx context.Context, req *protocol.MergePartReq) error {
 	// 校验参数
 	if len(req.FileId) <= 0 {
 		return errs.NewParamsErr(nil)
@@ -258,7 +259,7 @@ func MergePart(ctx context.Context, req *MergePartReq) error {
 	if index >= 0 {
 		ext = fileInfo.Name[index+1:]
 	}
-	file := &TFile{
+	file := &model.TFile{
 		FileId:     req.FileId,
 		UserId:     uid,
 		TusdId:     location,
@@ -281,6 +282,46 @@ func MergePart(ctx context.Context, req *MergePartReq) error {
 	log.ErrorIf(ctx, conn.GetRedisClient(ctx).HDel(ctx, conn.CacheKey_UploadFiles, req.FileId).Err())
 
 	return nil
+}
+
+// GetUserAvatar 获取用户头像
+func GetUserAvatar(ctx context.Context) (data io.ReadCloser, size int64, name string, err error) {
+	userId := ctxs.UserId(ctx)
+	if userId <= 0 {
+		return nil, 0, "", nil
+	}
+
+	// 查用户
+	var tuser model.TUser
+	err = conn.GetMySQLClient(ctx).Where("id = ?", userId).Find(&tuser).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, 0, "", errs.NewSystemBusyErr(err)
+	}
+	if tuser.Id <= 0 {
+		return nil, 0, "", errs.ErrIllegalRequest
+	}
+
+	// 查文件
+	tfile, err := GetFileById(ctx, tuser.Avatar)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	if tfile.Id <= 0 {
+		return nil, 0, "", errs.ErrFileNotExists
+	}
+
+	// 下载文件
+	getResult, err := conn.GetTusClient(ctx).Get(ctx, &tus_client.GetRequest{Location: tfile.TusdId})
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, 0, "", errs.NewSystemBusyErr(err)
+	}
+	if getResult.HTTPStatus != http.StatusOK {
+		return nil, 0, "", errs.ErrFileNotExists
+	}
+
+	return getResult.Body, int64(getResult.ContentLength), tfile.Name, nil
 }
 
 // CleanMultipartUpload 清理异常分片
@@ -385,18 +426,5 @@ func CleanMultipartUpload(ctx context.Context) error {
 		}
 	}
 
-	return nil
-}
-
-// CreateFile 数据库新增文件信息实体
-func CreateFile(ctx context.Context, f *TFile) error {
-	err := conn.GetMySQLClient(ctx).Create(f).Error
-	if err != nil {
-		log.ErrorIf(ctx, conn.GetMySQLClient(ctxs.CloneCtx(ctx)).Table(f.TableName()).AutoMigrate(&TFile{}))
-		err = conn.GetMySQLClient(ctx).Create(f).Error
-		if err != nil {
-			return errs.NewSystemBusyErr(err)
-		}
-	}
 	return nil
 }

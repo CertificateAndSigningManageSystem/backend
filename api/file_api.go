@@ -146,3 +146,18 @@ func (*FileAPI) MergePart(c *gin.Context) {
 
 	util.SuccessMsg(c, "上传成功")
 }
+
+// UserAvatar 下载用户头像
+func (*FileAPI) UserAvatar(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// 调用下游
+	data, size, name, err := service.GetUserAvatar(ctx)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+	defer util.CloseIO(ctx, data)
+
+	util.VendFile(c, size, name, data)
+}
