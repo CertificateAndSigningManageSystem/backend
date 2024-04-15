@@ -13,6 +13,7 @@
 package filter
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -37,12 +38,36 @@ func WebAuthFilter(c *gin.Context) {
 	ip := ctxs.RequestIP(ctx)
 
 	// 获取会话
-	sessionCookie, err := c.Request.Cookie(consts.SessionKey)
+	skey, err := c.Cookie(consts.SessionKey)
 	if err != nil {
 		c.Abort()
 		// 不存在会话凭证
 		if errors.Is(err, http.ErrNoCookie) {
-			util.Fail(c, http.StatusUnauthorized, "请先登陆")
+			util.FailByErr(c, errs.ErrNeedLogin)
+		} else {
+			log.Error(ctx, err)
+			util.FailByErr(c, errs.NewSystemBusyErr(err))
+		}
+		return
+	}
+	user, err := c.Cookie(consts.SessionUser)
+	if err != nil {
+		c.Abort()
+		if errors.Is(err, http.ErrNoCookie) {
+			util.FailByErr(c, errs.ErrNeedLogin)
+		} else {
+			log.Error(ctx, err)
+			util.FailByErr(c, errs.NewSystemBusyErr(err))
+		}
+	}
+
+	// 获取会话信息
+	session, err := conn.GetRedisClient(ctx).Get(
+		ctx, fmt.Sprintf(conn.CacheKey_UserSessionFmt, skey, user)).Result()
+	if err != nil {
+		c.Abort()
+		if errors.Is(err, redis.Nil) {
+			util.FailByErr(c, errs.ErrNeedLogin)
 		} else {
 			log.Error(ctx, err)
 			util.FailByErr(c, errs.NewSystemBusyErr(err))
@@ -50,43 +75,43 @@ func WebAuthFilter(c *gin.Context) {
 		return
 	}
 
-	// 获取会话信息
-	sessionStr, err := conn.GetRedisClient(ctx).Get(
-		ctx, fmt.Sprintf(conn.CacheKey_UserSession, sessionCookie.Value)).Result()
+	// 反序列数据
+	var data service.SessionInfo
+	err = json.Unmarshal([]byte(session), &data)
 	if err != nil {
 		c.Abort()
-		if errors.Is(err, redis.Nil) {
-			util.Fail(c, http.StatusUnauthorized, "请先登陆")
-		} else {
-			log.Error(ctx, err)
-			util.FailByErr(c, errs.NewSystemBusyErr(err))
-		}
+		log.Error(ctx, err, session)
+		util.FailByErr(c, errs.NewSystemBusyErr(err))
 		return
 	}
-	session, err := service.GetUserSessionInfo(ctx, sessionStr)
+
+	// 查库
+	tuser, err := service.GetUserInfoById(ctx, data.UserId)
 	if err != nil {
 		c.Abort()
-		// 删除非法会话
-		if errors.Is(err, errs.ErrUnknownUser) {
-			log.ErrorIf(ctx, conn.GetRedisClient(ctx).Del(ctx, sessionCookie.Value).Err())
-		}
-		util.FailByErr(c, err)
+		log.Error(ctx, err)
+		return
+	}
+	if tuser.Id <= 0 {
+		c.Abort()
+		log.Warn(ctx, "unknown user", session)
+		util.FailByErr(c, errs.ErrNeedLogin)
 		return
 	}
 
 	// 校验状态和IP
-	if session.TUser.Status != model.TUser_Status_OK {
+	if tuser.Status != model.TUser_Status_OK {
 		c.Abort()
 		util.Fail(c, http.StatusForbidden, "账号已锁定")
 		return
 	}
-	if session.LoginIP != ip {
+	if data.LoginIP != ip {
 		c.Abort()
-		util.Fail(c, http.StatusUnauthorized, "请先登陆")
+		util.FailByErr(c, errs.ErrNeedLogin)
 		return
 	}
 
-	ctx = ctxs.WithUserId(ctx, session.TUser.Id)
+	ctx = ctxs.WithUserId(ctx, tuser.Id)
 	c.Request = c.Request.WithContext(ctx)
 	c.Next()
 }

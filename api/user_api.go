@@ -76,6 +76,7 @@ func (*UserApi) Register(c *gin.Context) {
 	}
 
 	c.SetCookie(consts.SessionKey, session, 0, "", "", false, true)
+	c.SetCookie(consts.SessionUser, req.NameEn, 0, "", "", false, true)
 	util.SuccessMsg(c, "注册成功")
 }
 
@@ -99,6 +100,7 @@ func (*UserApi) Login(c *gin.Context) {
 	}
 
 	c.SetCookie(consts.SessionKey, session, 0, "", "", false, true)
+	c.SetCookie(consts.SessionUser, req.Name, 0, "", "", false, true)
 	util.SuccessMsg(c, "登陆成功")
 }
 
@@ -108,9 +110,10 @@ func (*UserApi) Logout(c *gin.Context) {
 
 	// 获取会话
 	session, _ := c.Cookie(consts.SessionKey)
+	user, _ := c.Cookie(consts.SessionUser)
 
 	// 调用下游
-	err := service.Logout(ctx, session)
+	err := service.Logout(ctx, user, session)
 	if err != nil {
 		util.FailByErr(c, err)
 		return

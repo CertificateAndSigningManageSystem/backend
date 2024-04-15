@@ -13,28 +13,29 @@
 package service
 
 import (
-	"errors"
-	"github.com/go-sql-driver/mysql"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
-	"io"
-	"time"
-
-	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"image"
+	"io"
+	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode"
 
 	"gitee.com/ivfzhou/gotools/v4"
 	"gitee.com/ivfzhou/tus_client"
+	"github.com/go-sql-driver/mysql"
+	"github.com/redis/go-redis/v9"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
@@ -46,15 +47,13 @@ import (
 	"backend/protocol"
 )
 
+const MaxLoginFailTimes = 3
+
 // SessionInfo 会话信息
 type SessionInfo struct {
-	LoginIP string
-	*model.TUser
-}
-
-type sessionCache struct {
-	UserId  uint   `json:"userId"`
-	LoginIP string `json:"loginIP"`
+	UserId    uint   `json:"userId"`
+	LoginIP   string `json:"loginIP"`
+	UserAgent string `json:"userAgent"`
 }
 
 // Register 注册
@@ -192,9 +191,9 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 	}
 
 	// 生成登陆会话信息
-	session, sessionVal := CreateUserSession(ctx, tuser.Id, ctxs.RequestIP(ctx))
-	err = conn.GetRedisClient(ctx).SetEx(ctx,
-		fmt.Sprintf(conn.CacheKey_UserSession, session), sessionVal, time.Hour*24).Err()
+	session, sessionVal := createUserSession(ctx, tuser.Id, ctxs.RequestIP(ctx), req.UserAgent)
+	err = conn.GetRedisClient(ctx).Set(ctx,
+		fmt.Sprintf(conn.CacheKey_UserSessionFmt, tuser.NameEn, session), sessionVal, time.Hour*24).Err()
 	if err != nil {
 		log.Error(ctx, err)
 		return "", errs.NewSystemBusyErr(err)
@@ -219,6 +218,19 @@ func Login(ctx context.Context, req *protocol.LoginReq) (session string, err err
 		return "", errs.NewParamsErr(nil)
 	}
 
+	// 获取登陆失败次数
+	loginFailTimes, err := conn.GetRedisClient(ctx).Get(ctx, fmt.Sprintf(conn.CacheKey_UserLoginFailTimesFmt, req.Name)).Int()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		log.Error(ctx, err)
+		return "", errs.NewSystemBusyErr(err)
+	}
+	if loginFailTimes >= MaxLoginFailTimes {
+		return "", &errs.Error{
+			HTTPStatus: http.StatusForbidden,
+			Msg:        "今日限制登陆",
+		}
+	}
+
 	// 查库
 	var tuser model.TUser
 	err = conn.GetMySQLClient(ctx).Where("name_en = ?", req.Name).Find(&tuser).Error
@@ -236,6 +248,12 @@ func Login(ctx context.Context, req *protocol.LoginReq) (session string, err err
 	// 计算密码散列
 	md5Sum := md5.Sum([]byte(req.Password + tuser.PasswdSalt))
 	if tuser.PasswdDigest != hex.EncodeToString(md5Sum[:]) {
+		// 记忆失败次数
+		err = rememberLoginFailTimes(ctx, req.Name)
+		if err != nil {
+			log.Error(ctx, err)
+			return "", errs.NewSystemBusyErr(err)
+		}
 		return "", errs.NewParamsErrMsg("密码错误")
 	}
 
@@ -259,22 +277,30 @@ func Login(ctx context.Context, req *protocol.LoginReq) (session string, err err
 		return "", errs.NewSystemBusyErr(err)
 	}
 
+	// TODO: 多端登陆，踢出其他登陆会话。加锁，维度用户，redis 事务。
+
 	// 记录会话
-	session, sessionVal := CreateUserSession(ctx, tuser.Id, ctxs.RequestIP(ctx))
+	session, sessionVal := createUserSession(ctx, tuser.Id, ctxs.RequestIP(ctx), req.UserAgent)
 	err = conn.GetRedisClient(ctx).SetEx(ctx,
-		fmt.Sprintf(conn.CacheKey_UserSession, session), sessionVal, time.Hour*24).Err()
+		fmt.Sprintf(conn.CacheKey_UserSessionFmt, tuser.NameEn, session), sessionVal, time.Hour*24).Err()
 	if err != nil {
 		log.Error(ctx, err)
 		return "", errs.NewSystemBusyErr(err)
+	}
+
+	// 清除登陆失败次数
+	err = conn.GetRedisClient(ctx).Del(ctx, fmt.Sprintf(conn.CacheKey_UserLoginFailTimesFmt, req.Name)).Err()
+	if err != nil {
+		log.Error(ctx, err)
 	}
 
 	return session, nil
 }
 
 // Logout 登出
-func Logout(ctx context.Context, session string) error {
+func Logout(ctx context.Context, user, session string) error {
 	// 删除会话缓存
-	err := conn.GetRedisClient(ctx).Del(ctx, fmt.Sprintf(conn.CacheKey_UserSession, session)).Err()
+	err := conn.GetRedisClient(ctx).Del(ctx, fmt.Sprintf(conn.CacheKey_UserSessionFmt, user, session)).Err()
 	if err != nil {
 		log.Error(ctx, err)
 		return errs.NewSystemBusyErr(err)
@@ -283,45 +309,8 @@ func Logout(ctx context.Context, session string) error {
 	return nil
 }
 
-// GetUserSessionInfo 获取会话信息
-func GetUserSessionInfo(ctx context.Context, session string) (*SessionInfo, error) {
-	// 反序列数据
-	var data sessionCache
-	err := json.Unmarshal([]byte(session), &data)
-	if err != nil {
-		log.Error(ctx, err, session)
-		return &SessionInfo{}, errs.NewSystemBusyErr(err)
-	}
-
-	// 查库
-	userInfo, err := GetUserInfoById(ctx, data.UserId)
-	if err != nil {
-		return &SessionInfo{}, err
-	}
-	if userInfo.Id <= 0 {
-		log.Warn(ctx, "unknown user", session)
-		return &SessionInfo{}, errs.ErrUnknownUser
-	}
-
-	return &SessionInfo{
-		LoginIP: data.LoginIP,
-		TUser:   userInfo,
-	}, nil
-}
-
-// CreateUserSession 创建用户会话
-func CreateUserSession(ctx context.Context, uid uint, ip string) (session, sessionVal string) {
-	session = gotools.RandomCharsCaseInsensitive(128)
-	bs, _ := json.Marshal(&sessionCache{
-		UserId:  uid,
-		LoginIP: ip,
-	})
-	sessionVal = string(bs)
-	return
-}
-
 // IsValidPassword 密码字符是否合法
-func IsValidPassword(ctx context.Context, passwd string) bool {
+func IsValidPassword(_ context.Context, passwd string) bool {
 	hasNum := false
 	hasUpper := false
 	hasLower := false
@@ -343,7 +332,7 @@ func IsValidPassword(ctx context.Context, passwd string) bool {
 }
 
 // IsValidUserNameEn 英文名字符是否合法
-func IsValidUserNameEn(ctx context.Context, nameEn string) bool {
+func IsValidUserNameEn(_ context.Context, nameEn string) bool {
 	if !util.IsAllLetterCharacters(nameEn) {
 		return false
 	}
@@ -351,4 +340,34 @@ func IsValidUserNameEn(ctx context.Context, nameEn string) bool {
 		return false
 	}
 	return true
+}
+
+// 创建用户会话
+func createUserSession(_ context.Context, uid uint, ip, userAgent string) (session, sessionVal string) {
+	session = gotools.RandomCharsCaseInsensitive(128)
+	bs, _ := json.Marshal(&SessionInfo{
+		UserId:    uid,
+		LoginIP:   ip,
+		UserAgent: userAgent,
+	})
+	sessionVal = string(bs)
+	return
+}
+
+// 记忆登陆失败次数
+func rememberLoginFailTimes(ctx context.Context, user string) error {
+	err := conn.GetRedisClient(ctx).Incr(ctx, fmt.Sprintf(conn.CacheKey_UserLoginFailTimesFmt, user)).Err()
+	if err != nil {
+		log.Error(ctx, err)
+		return err
+	}
+	now := time.Now()
+	next := now.AddDate(0, 0, 1)
+	sub := time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, time.Local).Sub(now)
+	err = conn.GetRedisClient(ctx).Expire(ctx, fmt.Sprintf(conn.CacheKey_UserLoginFailTimesFmt, user), sub).Err()
+	if err != nil {
+		log.Error(ctx, err)
+		return err
+	}
+	return nil
 }

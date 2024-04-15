@@ -15,13 +15,15 @@ package protocol
 import "mime/multipart"
 
 type RegisterReq struct {
-	NameZh   string                `json:"nameZh"`
-	NameEn   string                `json:"nameEn"`
-	Avatar   *multipart.FileHeader `json:"avatar"`
-	Password string                `json:"password"`
+	NameZh    string                `json:"nameZh"`
+	NameEn    string                `json:"nameEn"`
+	Avatar    *multipart.FileHeader `json:"avatar"`
+	Password  string                `json:"password"`
+	UserAgent string                `json:"userAgent"`
 }
 
 type LoginReq struct {
-	Name     string `json:"name"`
-	Password string `json:"password"`
+	Name      string `json:"name"`
+	Password  string `json:"password"`
+	UserAgent string `json:"userAgent"`
 }
