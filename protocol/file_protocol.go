@@ -14,6 +14,11 @@ package protocol
 
 import "io"
 
+const (
+	// 下载用户头像
+	DownloadType_UserAvatar = 1 + iota
+)
+
 // InitialUploadReq 初始化分片上传请求参数
 type InitialUploadReq struct {
 	Name   string `json:"name"`
@@ -37,6 +42,14 @@ type UploadPartReq struct {
 	Chunk     io.Reader
 }
 
+// MergePartReq 合并分片请求
 type MergePartReq struct {
 	FileId string
+}
+
+// DownloadReq 下载请求参数
+type DownloadReq struct {
+	Type   int    `form:"type"`
+	AppId  string `form:"appId"`
+	FileId string `form:"fileId"`
 }

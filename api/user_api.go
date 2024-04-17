@@ -138,7 +138,24 @@ func (*UserApi) Info(c *gin.Context) {
 
 // UpdateInfo 更新个人信息
 func (*UserApi) UpdateInfo(c *gin.Context) {
+	ctx := c.Request.Context()
 
+	// 解析请求参数
+	var req protocol.UpdateInfoReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		util.FailByErr(c, errs.NewParamsErr(err))
+		return
+	}
+
+	// 调用下游
+	err = service.UpdateInfo(ctx, &req)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.SuccessMsg(c, "修改成功")
 }
 
 // ChangePasswd 修改密码

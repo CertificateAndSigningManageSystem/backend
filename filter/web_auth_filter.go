@@ -91,7 +91,8 @@ func WebAuthFilter(c *gin.Context) {
 	}
 
 	// 查库
-	tuser, err := service.GetUserInfoById(ctx, data.UserId)
+	var tuser model.TUser
+	err = conn.GetMySQLClient(ctx).Where("id = ?", data.UserId).Find(&tuser).Error
 	if err != nil {
 		c.Abort()
 		log.Error(ctx, err)

@@ -17,7 +17,7 @@ import "mime/multipart"
 type RegisterReq struct {
 	NameZh    string                `json:"nameZh"`
 	NameEn    string                `json:"nameEn"`
-	Avatar    *multipart.FileHeader `json:"avatar"`
+	Avatar    *multipart.FileHeader `json:"-"`
 	Password  string                `json:"password"`
 	UserAgent string                `json:"userAgent"`
 }
@@ -32,4 +32,9 @@ type UserInfoRsp struct {
 	NameEn string `json:"nameEn"`
 	Avatar string `json:"avatar"`
 	NameZh string `json:"nameZh"`
+}
+
+type UpdateInfoReq struct {
+	NameZh string `json:"nameZh"`
+	Avatar string `json:"avatar"`
 }

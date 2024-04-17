@@ -32,6 +32,12 @@ import (
 )
 
 func init() {
+	var err error
+	time.Local, err = time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		panic(err)
+	}
+
 	conf.InitialConf("config.ini")
 	log.InitialLog(conf.Conf.Log.LogDir, conf.Conf.Log.Module, conf.Conf.Log.MaxAge, conf.Conf.Log.Rotation,
 		conf.Conf.Log.Debug)

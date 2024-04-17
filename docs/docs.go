@@ -15,7 +15,38 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/upload/initialUpload": {
+        "/api/file/download": {
+            "get": {
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "file-api"
+                ],
+                "summary": "下载",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "jwt凭证",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件Id",
+                        "name": "fileId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/api/file/initialUpload": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -55,7 +86,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/upload/mergePart": {
+        "/api/file/mergePart": {
             "post": {
                 "consumes": [
                     "application/x-www-form-urlencoded"
@@ -89,7 +120,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/upload/uploadPart": {
+        "/api/file/uploadPart": {
             "patch": {
                 "consumes": [
                     "multipart/form-data"

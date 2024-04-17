@@ -16,8 +16,11 @@ import (
 	double_array_trie "gitee.com/ivfzhou/double-array-trie"
 	"github.com/gin-gonic/gin"
 
+	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
+	"gitee.com/CertificateAndSigningManageSystem/common/log"
+	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
 	"backend/service"
@@ -54,14 +57,16 @@ func AuthenticateFilter(c *gin.Context) {
 
 	// 如果userId合法则校验权限和状态
 	if userId > 0 {
-		userInfo, err := service.GetUserInfoById(ctx, userId)
+		var tuser model.TUser
+		err := conn.GetMySQLClient(ctx).Where("id = ?", ctxs.UserId(ctx)).Find(&tuser).Error
 		if err != nil {
 			c.Abort()
+			log.Error(ctx, err)
 			util.FailByErr(c, errs.NewSystemBusyErr(err))
 			return
 		}
 		// 用户不存在，则限制请求
-		if userInfo.Id <= 0 {
+		if tuser.Id <= 0 {
 			c.Abort()
 			util.FailByErr(c, errs.ErrIllegalRequest)
 			return

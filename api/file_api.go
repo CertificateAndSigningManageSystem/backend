@@ -119,7 +119,7 @@ func (*FileAPI) UploadPart(c *gin.Context) {
 		return
 	}
 
-	util.Success(c, "")
+	util.Success(c, nil)
 }
 
 // MergePart godoc
@@ -147,17 +147,34 @@ func (*FileAPI) MergePart(c *gin.Context) {
 	util.SuccessMsg(c, "上传成功")
 }
 
-// UserAvatar 下载用户头像
-func (*FileAPI) UserAvatar(c *gin.Context) {
+// Download godoc
+//
+//	@Summary	下载
+//	@Tags		file-api
+//	@Accept		x-www-form-urlencoded
+//	@produce	octet-stream
+//	@Param		Authorization	header	string	true	"jwt凭证"
+//	@Param		fileId			query	string	true	"文件Id"
+//	@Router		/api/file/download [get]
+func (*FileAPI) Download(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	// 获取请求参数
+	var req protocol.DownloadReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		log.Warn(ctx, err)
+		util.FailByErr(c, errs.NewParamsErr(err))
+		return
+	}
+
 	// 调用下游
-	data, size, name, err := service.GetUserAvatar(ctx)
+	data, fileName, fileSize, err := service.Download(ctx, &req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
 	}
 	defer util.CloseIO(ctx, data)
 
-	util.VendFile(c, size, name, data)
+	util.VendFile(c, fileSize, fileName, data)
 }

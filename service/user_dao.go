@@ -21,17 +21,6 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 )
 
-// GetUserInfoById 根据id获取用户信息
-func GetUserInfoById(ctx context.Context, id uint) (*model.TUser, error) {
-	var info model.TUser
-	err := conn.GetMySQLClient(ctx).Where("id = ?", id).Find(&info).Error
-	if err != nil {
-		log.Error(ctx, err, id)
-		return nil, errs.NewSystemBusyErr(err)
-	}
-	return &info, nil
-}
-
 // HasUserAnyAuthorities 判断userId是否具有authorities中任何一个角色
 func HasUserAnyAuthorities(ctx context.Context, userId uint, authorities ...uint) (bool, error) {
 	if len(authorities) <= 0 {

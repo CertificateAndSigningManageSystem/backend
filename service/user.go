@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -47,7 +48,10 @@ import (
 	"backend/protocol"
 )
 
-const MaxLoginFailTimes = 3
+const (
+	MaxLoginFailTimes = 3
+	FileIdLength      = 38
+)
 
 // SessionInfo 会话信息
 type SessionInfo struct {
@@ -59,11 +63,8 @@ type SessionInfo struct {
 // Register 注册
 func Register(ctx context.Context, req *protocol.RegisterReq) (session string, err error) {
 	// 校验
-	if !util.IsAllHanCharacters(req.NameZh) {
-		return "", errs.NewParamsErrMsg("中文名应全是数字")
-	}
-	if len(req.NameZh) > 32 {
-		return "", errs.NewParamsErrMsg("中文名过长")
+	if !IsValidUserNameZh(ctx, req.NameZh) {
+		return "", errs.NewParamsErrMsg("中文名应全是汉字且不超过8个字符")
 	}
 	if !IsValidUserNameEn(ctx, req.NameEn) {
 		return "", errs.NewParamsErrMsg("英文名应全是字母且不超过16个字符")
@@ -71,39 +72,12 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 	if !IsValidPassword(ctx, req.Password) {
 		return "", errs.NewParamsErrMsg("密码须是字母数字组合，至少包含三种字符类型，长度不小于八位")
 	}
-	if req.Avatar.Size <= 0 {
-		return "", errs.NewParamsErrMsg("请上传头像")
-	}
-	fileName := req.Avatar.Filename
-	file, err := req.Avatar.Open()
+	fileData, b, err := IsValidUserAvatar(ctx, req.Avatar)
 	if err != nil {
-		log.Error(ctx, err)
-		return "", errs.NewSystemBusyErr(err)
+		return "", err
 	}
-	defer util.CloseIO(ctx, file)
-	fileData, err := io.ReadAll(file)
-	if err != nil {
-		log.Error(ctx, err)
-		return "", errs.NewSystemBusyErr(err)
-	}
-	fileExt := strings.ToLower(filepath.Ext(fileName))
-	if fileExt == ".jpg" {
-		fileExt = ".jpeg"
-	}
-	switch fileExt {
-	case ".jpeg":
-	case ".png":
-	case ".gif":
-	default:
-		return "", errs.NewParamsErrMsg("头像格式不支持")
-	}
-	_, imgFmt, err := image.DecodeConfig(bytes.NewReader(fileData))
-	if err != nil {
-		log.Warn(ctx, err)
-		return "", errs.NewParamsErrMsg("头像格式内容错误")
-	}
-	if !strings.EqualFold("."+imgFmt, fileExt) {
-		return "", errs.NewParamsErrMsg("头像格式名错误")
+	if !b {
+		return "", errs.NewParamsErrMsg("头像非法")
 	}
 
 	// 生成头像文件Id
@@ -166,7 +140,6 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 		UserId:     tuser.Id,
 		TusdId:     location,
 		Name:       req.Avatar.Filename,
-		Ext:        fileExt,
 		MD5:        _md5,
 		SHA1:       _sha1,
 		SHA256:     _sha256,
@@ -334,8 +307,148 @@ func GetUserInfo(ctx context.Context) (*protocol.UserInfoRsp, error) {
 	return res, nil
 }
 
+// UpdateInfo 更新用户信息
+func UpdateInfo(ctx context.Context, req *protocol.UpdateInfoReq) error {
+	// 校验
+	if len(req.Avatar) != FileIdLength {
+		return errs.NewParamsErrMsg("头像文件不合法")
+	}
+	if !IsValidUserNameZh(ctx, req.NameZh) {
+		return errs.NewParamsErrMsg("中文名应全是汉字且不超过8个字符")
+	}
+
+	// 查库
+	var tuser model.TUser
+	err := conn.GetMySQLClient(ctx).Where("id = ?", ctxs.UserId(ctx)).Find(&tuser).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	if tuser.Id <= 0 {
+		return errs.NewParamsErrMsg("用户不存在")
+	}
+
+	// 是否更新头像
+	if req.Avatar != tuser.Avatar {
+		// 获取头像文件
+		tfile, err := GetFileById(ctx, req.Avatar)
+		if err != nil {
+			return errs.NewSystemBusyErr(err)
+		}
+		buf := &bytes.Buffer{}
+		err = conn.GetTusClient(ctx).DownloadToWriter(ctx, tfile.TusdId, buf)
+		if err != nil {
+			log.Error(ctx, err)
+			return errs.NewSystemBusyErr(err)
+		}
+		// 校验文件头像格式
+		b, err := IsValidUserAvatarV2(ctx, tfile.Name, buf.Bytes())
+		if err != nil || !b {
+			// TODO: 删除头像
+			return errs.NewParamsErrMsg("头像格式不合法")
+		}
+	}
+
+	// 更新
+	err = conn.GetMySQLClient(ctx).Model(&model.TUser{}).Where("id = ?", tuser.Id).UpdateColumns(map[string]any{
+		"name_zh": req.NameZh,
+		"avatar":  req.Avatar,
+	}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	return nil
+}
+
+// IsValidUserAvatar 头像是否合规
+func IsValidUserAvatar(ctx context.Context, file *multipart.FileHeader) ([]byte, bool, error) {
+	if file.Size <= 0 {
+		return nil, false, nil
+	}
+	fileName := file.Filename
+	fileObj, err := file.Open()
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, false, errs.NewSystemBusyErr(err)
+	}
+	defer util.CloseIO(ctx, fileObj)
+	fileData, err := io.ReadAll(fileObj)
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, false, errs.NewSystemBusyErr(err)
+	}
+	fileExt := strings.ToLower(filepath.Ext(fileName))
+	if fileExt == ".jpg" {
+		fileExt = ".jpeg"
+	}
+	switch fileExt {
+	case ".jpeg":
+	case ".png":
+	case ".gif":
+	default:
+		return nil, false, nil
+	}
+	_, imgFmt, err := image.DecodeConfig(bytes.NewReader(fileData))
+	if err != nil {
+		log.Warn(ctx, err)
+		return nil, false, errs.NewParamsErrMsg("头像格式内容错误")
+	}
+	if !strings.EqualFold("."+imgFmt, fileExt) {
+		return nil, false, nil
+	}
+
+	return fileData, true, nil
+}
+
+// IsValidUserAvatarV2 头像是否合规
+func IsValidUserAvatarV2(ctx context.Context, fileName string, data []byte) (bool, error) {
+	if len(data) <= 0 {
+		return false, nil
+	}
+	fileExt := strings.ToLower(filepath.Ext(fileName))
+	if fileExt == ".jpg" {
+		fileExt = ".jpeg"
+	}
+	switch fileExt {
+	case ".jpeg":
+	case ".png":
+	case ".gif":
+	default:
+		return false, nil
+	}
+	_, imgFmt, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		log.Warn(ctx, err)
+		return false, errs.NewParamsErrMsg("头像格式内容错误")
+	}
+	if !strings.EqualFold("."+imgFmt, fileExt) {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// IsValidUserNameZh 中文名字符是否合法
+func IsValidUserNameZh(_ context.Context, name string) bool {
+	if len(name) <= 0 {
+		return false
+	}
+	if !util.IsAllHanCharacters(name) {
+		return false
+	}
+	if len(name) > 32 {
+		return false
+	}
+	return true
+}
+
 // IsValidPassword 密码字符是否合法
 func IsValidPassword(_ context.Context, passwd string) bool {
+	if len(passwd) < 0 {
+		return false
+	}
 	hasNum := false
 	hasUpper := false
 	hasLower := false
@@ -358,6 +471,9 @@ func IsValidPassword(_ context.Context, passwd string) bool {
 
 // IsValidUserNameEn 英文名字符是否合法
 func IsValidUserNameEn(_ context.Context, nameEn string) bool {
+	if len(nameEn) <= 0 {
+		return false
+	}
 	if !util.IsAllLetterCharacters(nameEn) {
 		return false
 	}
