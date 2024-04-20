@@ -80,10 +80,16 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 		return "", errs.NewParamsErrMsg("头像非法")
 	}
 
+	// 加锁
+	lockKey := fmt.Sprintf(conn.LockKey_UserRegisterFmt, req.NameEn)
+	if !conn.Lock(ctx, lockKey, 12*time.Hour) {
+		return "", errs.ErrTooManyRequest
+	}
+	defer conn.Unlock(ctx, lockKey)
+
 	// 生成头像文件Id
 	fileId, err := GenerateId(ctx, IdScope_File)
 	if err != nil {
-		log.Error(ctx, err)
 		return "", err
 	}
 	defer func() {
@@ -146,7 +152,7 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 		Size:       int(req.Avatar.Size),
 		CreateTime: now,
 	}
-	if err = CreateFile(ctx, tfile); err != nil {
+	if err = CreateDBFile(ctx, tfile); err != nil {
 		log.Error(ctx, err)
 		return "", err
 	}
@@ -377,6 +383,98 @@ func ChangePassword(ctx context.Context, req *protocol.ChangePasswordReq) error 
 	return nil
 }
 
+// ChangeAvatar 修改头像
+func ChangeAvatar(ctx context.Context, req *protocol.ChangeAvatarReq) error {
+	// 校验
+	fileName := req.Avatar.Filename
+	data, b, err := IsValidUserAvatar(ctx, req.Avatar)
+	if err != nil {
+		return err
+	}
+	if !b {
+		return errs.NewParamsErrMsg("头像格式非法")
+	}
+
+	// 获取用户信息
+	var tuser model.TUser
+	if err = conn.GetMySQLClient(ctx).Where("id = ?", ctxs.UserId(ctx)).Find(&tuser).Error; err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	// 加锁
+	lockKey := fmt.Sprintf(conn.LockKey_UserChangeAvatarFmt, ctxs.UserId(ctx))
+	if !conn.Lock(ctx, lockKey, 12*time.Hour) {
+		return errs.ErrTooManyRequest
+	}
+	defer conn.Unlock(ctx, lockKey)
+
+	// 生成文件 Id
+	fileId, err := GenerateId(ctx, IdScope_File)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			log.ErrorIf(ctx, ReclaimId(ctx, IdScope_File, fileId))
+		}
+	}()
+
+	// 上传到 Tus
+	location, err := conn.GetTusClient(ctx).MultipleUploadFromReader(ctx, bytes.NewReader(data))
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	defer func() {
+		if err != nil {
+			_, err := conn.GetTusClient(ctx).Delete(ctx, &tus_client.DeleteRequest{Location: location})
+			log.ErrorIf(ctx, err)
+		}
+	}()
+
+	// 文件信息落库
+	_md5, _sha1, _sha256 := util.CalcSum(data)
+	err = CreateDBFile(ctx, &model.TFile{
+		FileId:     fileId,
+		UserId:     ctxs.UserId(ctx),
+		TusdId:     location,
+		Name:       fileName,
+		MD5:        _md5,
+		SHA1:       _sha1,
+		SHA256:     _sha256,
+		Size:       len(data),
+		CreateTime: time.Now(),
+	})
+	if err != nil {
+		return err
+	}
+
+	// 更新用户信息
+	err = conn.GetMySQLClient(ctx).Model(&model.TUser{}).Where("id = ?", tuser.Id).UpdateColumns(map[string]any{
+		"avatar": fileId,
+	}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	// 删除老头像
+	toldFile, err := QueryDBFileById(ctx, tuser.Avatar)
+	if err != nil {
+		return err
+	}
+	if err = DeleteDBFile(ctx, tuser.Avatar); err != nil {
+		return err
+	}
+
+	// 删除 tus 里的头像
+	_, ignoredErr := conn.GetTusClient(ctx).Delete(ctx, &tus_client.DeleteRequest{Location: toldFile.TusdId})
+	log.ErrorIf(ctx, ignoredErr)
+
+	return nil
+}
+
 // IsValidUserAvatar 头像是否合规
 func IsValidUserAvatar(ctx context.Context, file *multipart.FileHeader) ([]byte, bool, error) {
 	if file.Size <= 0 {
@@ -415,34 +513,6 @@ func IsValidUserAvatar(ctx context.Context, file *multipart.FileHeader) ([]byte,
 	}
 
 	return fileData, true, nil
-}
-
-// IsValidUserAvatarV2 头像是否合规
-func IsValidUserAvatarV2(ctx context.Context, fileName string, data []byte) (bool, error) {
-	if len(data) <= 0 {
-		return false, nil
-	}
-	fileExt := strings.ToLower(filepath.Ext(fileName))
-	if fileExt == ".jpg" {
-		fileExt = ".jpeg"
-	}
-	switch fileExt {
-	case ".jpeg":
-	case ".png":
-	case ".gif":
-	default:
-		return false, nil
-	}
-	_, imgFmt, err := image.DecodeConfig(bytes.NewReader(data))
-	if err != nil {
-		log.Warn(ctx, err)
-		return false, errs.NewParamsErrMsg("头像格式内容错误")
-	}
-	if !strings.EqualFold("."+imgFmt, fileExt) {
-		return false, nil
-	}
-
-	return true, nil
 }
 
 // IsValidUserNameZh 中文名字符是否合法

@@ -48,3 +48,8 @@ type ChangePasswordReq struct {
 	NewPassword      string `json:"newPassword"`
 	NewPasswordAgain string `json:"newPasswordAgain"`
 }
+
+// ChangeAvatarReq 修改头像请求
+type ChangeAvatarReq struct {
+	Avatar *multipart.FileHeader `json:"-"`
+}

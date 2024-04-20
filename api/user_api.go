@@ -36,7 +36,7 @@ func (*UserApi) Register(c *gin.Context) {
 	// 解析请求参数
 	form, err := c.MultipartForm()
 	if err != nil {
-		log.Error(ctx, err)
+		log.Warn(ctx, err)
 		util.FailByErr(c, errs.NewSystemBusyErr(err))
 		return
 	}
@@ -88,6 +88,7 @@ func (*UserApi) Login(c *gin.Context) {
 	var req protocol.LoginReq
 	err := c.ShouldBind(&req)
 	if err != nil {
+		log.Warn(ctx, err)
 		util.FailByErr(c, errs.NewParamsErr(err))
 		return
 	}
@@ -146,6 +147,7 @@ func (*UserApi) UpdateInfo(c *gin.Context) {
 	var req protocol.UpdateInfoReq
 	err := c.ShouldBind(&req)
 	if err != nil {
+		log.Warn(ctx, err)
 		util.FailByErr(c, errs.NewParamsErr(err))
 		return
 	}
@@ -168,12 +170,43 @@ func (*UserApi) ChangePassword(c *gin.Context) {
 	var req protocol.ChangePasswordReq
 	err := c.ShouldBind(&req)
 	if err != nil {
+		log.Warn(ctx, err)
 		util.FailByErr(c, errs.NewParamsErr(err))
 		return
 	}
 
 	// 调用下游
 	err = service.ChangePassword(ctx, &req)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.SuccessMsg(c, "修改成功")
+}
+
+// ChangeAvatar 修改头像
+func (*UserApi) ChangeAvatar(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// 解析参数
+	multipartForm, err := c.MultipartForm()
+	if err != nil {
+		log.Warn(ctx, err)
+		util.FailByErr(c, errs.NewParamsErr(err))
+		return
+	}
+	files := multipartForm.File["file"]
+	if len(files) != 1 {
+		util.FailByErr(c, errs.NewParamsErr(nil))
+		return
+	}
+	file := files[0]
+
+	// 调用下游
+	err = service.ChangeAvatar(ctx, &protocol.ChangeAvatarReq{
+		Avatar: file,
+	})
 	if err != nil {
 		util.FailByErr(c, err)
 		return

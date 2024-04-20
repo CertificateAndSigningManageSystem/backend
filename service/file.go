@@ -293,7 +293,7 @@ func Download(ctx context.Context, req *protocol.DownloadReq) (
 	data io.ReadCloser, fileName string, fileSize int64, err error) {
 
 	// 校验
-	if len(req.FileId) <= FileIdLength {
+	if len(req.FileId) != FileIdLength {
 		return nil, "", 0, errs.ErrFileNotExists
 	}
 	switch req.Type {
@@ -313,7 +313,7 @@ func Download(ctx context.Context, req *protocol.DownloadReq) (
 	}
 
 	// 查库
-	tfile, err := GetFileById(ctx, req.FileId)
+	tfile, err := QueryDBFileById(ctx, req.FileId)
 	if err != nil {
 		return nil, "", 0, err
 	}
@@ -346,7 +346,7 @@ func CleanMultipartUpload(ctx context.Context) error {
 	for fileId, fileInfoStr := range result {
 		func(fileId, fileInfoStr string) {
 			// 加锁，避免在合并分片
-			if !conn.Lock(ctx, fileId, 0) {
+			if !conn.Lock(ctx, fileId, 12*time.Hour) {
 				return
 			}
 			defer conn.Unlock(ctx, fileId)
@@ -457,7 +457,7 @@ func CleanMultipartUpload(ctx context.Context) error {
 			gotools.ConvertSlice(members, func(e string) any { return e })...).Err())
 
 		// 如果文件 id 不存在数据库中，则回收唯一 id。文件存在数据库中，说明合并文件分片时，还在上传文件分片。
-		tfile, err := GetFileById(ctx, fileId)
+		tfile, err := QueryDBFileById(ctx, fileId)
 		if err != nil {
 			log.Error(ctx, err)
 			continue
