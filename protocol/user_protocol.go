@@ -40,5 +40,11 @@ type UserInfoRsp struct {
 // UpdateInfoReq 更新用户信息请求
 type UpdateInfoReq struct {
 	NameZh string `json:"nameZh"`
-	Avatar string `json:"avatar"`
+}
+
+// ChangePasswordReq 更改密码请求
+type ChangePasswordReq struct {
+	OldPassword      string `json:"oldPassword"`
+	NewPassword      string `json:"newPassword"`
+	NewPasswordAgain string `json:"newPasswordAgain"`
 }

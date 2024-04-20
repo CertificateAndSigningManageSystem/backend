@@ -310,9 +310,6 @@ func GetUserInfo(ctx context.Context) (*protocol.UserInfoRsp, error) {
 // UpdateInfo 更新用户信息
 func UpdateInfo(ctx context.Context, req *protocol.UpdateInfoReq) error {
 	// 校验
-	if len(req.Avatar) != FileIdLength {
-		return errs.NewParamsErrMsg("头像文件不合法")
-	}
 	if !IsValidUserNameZh(ctx, req.NameZh) {
 		return errs.NewParamsErrMsg("中文名应全是汉字且不超过8个字符")
 	}
@@ -328,31 +325,49 @@ func UpdateInfo(ctx context.Context, req *protocol.UpdateInfoReq) error {
 		return errs.NewParamsErrMsg("用户不存在")
 	}
 
-	// 是否更新头像
-	if req.Avatar != tuser.Avatar {
-		// 获取头像文件
-		tfile, err := GetFileById(ctx, req.Avatar)
-		if err != nil {
-			return errs.NewSystemBusyErr(err)
-		}
-		buf := &bytes.Buffer{}
-		err = conn.GetTusClient(ctx).DownloadToWriter(ctx, tfile.TusdId, buf)
-		if err != nil {
-			log.Error(ctx, err)
-			return errs.NewSystemBusyErr(err)
-		}
-		// 校验文件头像格式
-		b, err := IsValidUserAvatarV2(ctx, tfile.Name, buf.Bytes())
-		if err != nil || !b {
-			// TODO: 删除头像
-			return errs.NewParamsErrMsg("头像格式不合法")
-		}
-	}
-
 	// 更新
 	err = conn.GetMySQLClient(ctx).Model(&model.TUser{}).Where("id = ?", tuser.Id).UpdateColumns(map[string]any{
 		"name_zh": req.NameZh,
-		"avatar":  req.Avatar,
+	}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	return nil
+}
+
+// ChangePassword 修改密码
+func ChangePassword(ctx context.Context, req *protocol.ChangePasswordReq) error {
+	// 校验
+	if len(req.OldPassword) <= 0 || len(req.NewPassword) <= 0 || len(req.NewPasswordAgain) <= 0 ||
+		req.NewPassword != req.NewPasswordAgain || !IsValidPassword(ctx, req.OldPassword) ||
+		!IsValidPassword(ctx, req.NewPassword) {
+		return errs.NewParamsErr(nil)
+	}
+
+	// 查库
+	var tuser model.TUser
+	err := conn.GetMySQLClient(ctx).Where("id = ?", ctxs.UserId(ctx)).Find(&tuser).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	md5Sum := md5.Sum([]byte(req.OldPassword + tuser.PasswdSalt))
+	passwdDigest := hex.EncodeToString(md5Sum[:])
+	if tuser.PasswdDigest != passwdDigest {
+		return errs.NewParamsErr(nil)
+	}
+
+	// 计算新密码散列
+	salt := gotools.RandomCharsCaseInsensitive(128)
+	md5Sum = md5.Sum([]byte(req.NewPassword + salt))
+	passwdDigest = hex.EncodeToString(md5Sum[:])
+
+	// 更新数据库
+	err = conn.GetMySQLClient(ctx).Model(&model.TUser{}).Where("id = ?", tuser.Id).UpdateColumns(map[string]any{
+		"passwd_digest": passwdDigest,
+		"passwd_salt":   salt,
 	}).Error
 	if err != nil {
 		log.Error(ctx, err)

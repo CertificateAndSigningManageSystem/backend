@@ -119,6 +119,8 @@ func (*UserApi) Logout(c *gin.Context) {
 		return
 	}
 
+	c.SetCookie(consts.SessionKey, session, -1, "", "", false, true)
+	c.SetCookie(consts.SessionUser, user, -1, "", "", false, true)
 	util.SuccessMsg(c, "登出成功")
 }
 
@@ -158,7 +160,24 @@ func (*UserApi) UpdateInfo(c *gin.Context) {
 	util.SuccessMsg(c, "修改成功")
 }
 
-// ChangePasswd 修改密码
-func (*UserApi) ChangePasswd(c *gin.Context) {
+// ChangePassword 修改密码
+func (*UserApi) ChangePassword(c *gin.Context) {
+	ctx := c.Request.Context()
 
+	// 解析请求参数
+	var req protocol.ChangePasswordReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		util.FailByErr(c, errs.NewParamsErr(err))
+		return
+	}
+
+	// 调用下游
+	err = service.ChangePassword(ctx, &req)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.SuccessMsg(c, "修改成功")
 }

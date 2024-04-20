@@ -36,5 +36,5 @@ func initWebRoute(r *gin.RouterGroup) {
 	userGroup.DELETE("/logout", filter.WebAuthFilter, filter.AntiShakeFilter, user.Logout)
 	userGroup.GET("/info", filter.WebAuthFilter, user.Info)
 	userGroup.PUT("/updateInfo", filter.WebAuthFilter, filter.AntiShakeFilter, user.UpdateInfo)
-	userGroup.POST("/changePasswd", filter.WebAuthFilter, filter.AntiShakeFilter, filter.AuthenticateFilter, user.ChangePasswd)
+	userGroup.POST("/changePassword", filter.WebAuthFilter, filter.AntiShakeFilter, user.ChangePassword)
 }
