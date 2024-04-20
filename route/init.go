@@ -26,13 +26,13 @@ import (
 func InitialRouter(ctx context.Context) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
-	engine.Use(filter.Recover, filter.LogfmtFilter)
+	engine.Use(filter.ExitFilter(ctx), filter.Recover, filter.LogfmtFilter)
 
 	swagger := engine.Group("/swagger")
 	swagger.GET("*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	web := engine.Group("/web")
-	api := engine.Group("/api", filter.APIAuthFilter)
+	api := engine.Group("/api")
 	initWebRoute(web)
 	initAPIRoute(api)
 	filter.InitialPathAuthoritiesDAT()

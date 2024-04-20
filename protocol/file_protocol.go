@@ -15,12 +15,17 @@ package protocol
 import "io"
 
 const (
-	// 下载用户头像
+	// DownloadType_UserAvatar 下载用户头像
 	DownloadType_UserAvatar = 1 + iota
+)
+
+const (
+	UploadType_UserAvatar = 1 + iota
 )
 
 // InitialUploadReq 初始化分片上传请求参数
 type InitialUploadReq struct {
+	Type   int    `json:"type"`
 	Name   string `json:"name"`
 	Size   int    `json:"size"`
 	MD5    string `json:"md5"`

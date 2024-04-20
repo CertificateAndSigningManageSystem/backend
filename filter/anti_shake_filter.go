@@ -14,7 +14,6 @@ package filter
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -66,27 +65,6 @@ func InitialAntiShakeScript(ctx context.Context) {
 // AntiShakeFilter 请求防抖过滤器
 func AntiShakeFilter(c *gin.Context) {
 	ctx := c.Request.Context()
-
-	// 获取并校验请求时间
-	date := c.Request.Header.Get("Date")
-	reqDate, err := time.ParseInLocation("Mon, 02 Jan 2006 15:04:05 GMT", date, time.Local)
-	if err != nil {
-		c.Abort()
-		util.FailByErr(c, &errs.Error{
-			HTTPStatus: http.StatusBadRequest,
-			WrappedErr: err,
-		})
-		return
-	}
-	// 请求时间超时
-	if since := time.Since(reqDate); since > antiShakeMaxPeriod || since < 0 {
-		c.Abort()
-		util.FailByErr(c, &errs.Error{
-			HTTPStatus: http.StatusBadRequest,
-			WrappedErr: fmt.Errorf("since is %v", since),
-		})
-		return
-	}
 
 	// 执行Redis脚本
 	userId := ctxs.UserId(ctx)

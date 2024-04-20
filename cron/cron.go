@@ -43,8 +43,10 @@ func InitialCron(ctx context.Context) {
 }
 
 // CloseCron 关闭定时任务
-func CloseCron(ctx context.Context) {
-	<-c.Stop().Done()
+func CloseCron(_ context.Context) {
+	if c != nil {
+		<-c.Stop().Done()
+	}
 }
 
 // MultipartUploadCleaner 定时清理分片文件上传异常数据

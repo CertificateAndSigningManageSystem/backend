@@ -24,7 +24,7 @@ func ExitFilter(ctx context.Context) func(*gin.Context) {
 	return func(c *gin.Context) {
 		select {
 		case <-ctx.Done():
-			c.String(http.StatusServiceUnavailable, "server is shutting down")
+			c.String(http.StatusServiceUnavailable, "服务正在关闭中")
 			c.Abort()
 		default:
 			c.Next()

@@ -185,6 +185,9 @@ const docTemplate = `{
                 },
                 "size": {
                     "type": "integer"
+                },
+                "type": {
+                    "type": "integer"
                 }
             }
         },

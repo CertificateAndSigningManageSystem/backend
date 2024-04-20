@@ -53,6 +53,14 @@ func InitialUpload(ctx context.Context, req *protocol.InitialUploadReq) (*protoc
 	if len(req.SHA1) != 40 || len(req.SHA256) != 64 || len(req.MD5) != 32 || len(req.Name) <= 0 || req.Size <= 0 {
 		return nil, errs.NewParamsErr(nil)
 	}
+	switch req.Type {
+	case protocol.UploadType_UserAvatar:
+		if ctxs.UserId(ctx) < 0 {
+			return nil, errs.ErrIllegalRequest
+		}
+	default:
+		return nil, errs.ErrIllegalRequest
+	}
 
 	// 查询数据库，是否存在相同信息的文件
 	var file model.TFile
@@ -88,8 +96,7 @@ func InitialUpload(ctx context.Context, req *protocol.InitialUploadReq) (*protoc
 		CreateTime: time.Now().Format("20060102150405"),
 	}
 	bs, _ := json.Marshal(fileInfo)
-	err = conn.GetRedisClient(ctx).HSet(ctx, conn.CacheKey_UploadFiles, id, string(bs)).Err()
-	if err != nil {
+	if err = conn.GetRedisClient(ctx).HSet(ctx, conn.CacheKey_UploadFiles, id, string(bs)).Err(); err != nil {
 		log.Error(ctx, err)
 		// 初始化上传失败，回收唯一文件 id
 		log.ErrorIf(ctx, ReclaimId(ctx, IdScope_File, id))
@@ -117,8 +124,7 @@ func UploadPart(ctx context.Context, req *protocol.UploadPartReq) error {
 		return errs.NewSystemBusyErr(err)
 	}
 	var fileInfo fileInfoCache
-	err = json.Unmarshal([]byte(fileInfoStr), &fileInfo)
-	if err != nil {
+	if err = json.Unmarshal([]byte(fileInfoStr), &fileInfo); err != nil {
 		log.Error(ctx, err)
 		return errs.NewSystemBusyErr(err)
 	}
@@ -131,8 +137,8 @@ func UploadPart(ctx context.Context, req *protocol.UploadPartReq) error {
 	}
 
 	// 分片缓存信息中是否已存在该序号分片
-	existMember, err := conn.GetRedisClient(ctx).ZRange(ctx, fmt.Sprintf(conn.CacheKey_UploadPartFmt, req.FileId),
-		int64(req.ChunkNum), int64(req.ChunkNum+1)).Result()
+	existMember, err := conn.GetRedisClient(ctx).ZRangeByScore(ctx, fmt.Sprintf(conn.CacheKey_UploadPartFmt, req.FileId),
+		&redis.ZRangeBy{Min: strconv.Itoa(req.ChunkNum), Max: strconv.Itoa(req.ChunkNum)}).Result()
 	if err != nil {
 		log.Error(ctx, err)
 		return errs.NewSystemBusyErr(err)
@@ -143,8 +149,7 @@ func UploadPart(ctx context.Context, req *protocol.UploadPartReq) error {
 
 	// 加锁，文件分片
 	lockKey := fmt.Sprintf("%s-%d", req.FileId, req.ChunkNum)
-	lock := conn.Lock(ctx, lockKey, 60*time.Second)
-	if !lock {
+	if !conn.Lock(ctx, lockKey, 60*time.Second) {
 		return errs.ErrTooManyRequest
 	}
 	defer conn.Unlock(ctx, lockKey)
@@ -195,8 +200,7 @@ func MergePart(ctx context.Context, req *protocol.MergePartReq) error {
 		return errs.NewSystemBusyErr(err)
 	}
 	var fileInfo fileInfoCache
-	err = json.Unmarshal([]byte(fileInfoStr), &fileInfo)
-	if err != nil {
+	if err = json.Unmarshal([]byte(fileInfoStr), &fileInfo); err != nil {
 		log.Error(ctx, err)
 		return errs.NewSystemBusyErr(err)
 	}
@@ -209,8 +213,7 @@ func MergePart(ctx context.Context, req *protocol.MergePartReq) error {
 	}
 
 	// 加锁，文件，避免定时任务在处理垃圾分片
-	lock := conn.LockWait(ctx, req.FileId, time.Second*60)
-	if !lock {
+	if !conn.LockWait(ctx, req.FileId, time.Second*60) {
 		return errs.ErrTooManyRequest
 	}
 	defer conn.Unlock(ctx, req.FileId)
@@ -276,7 +279,7 @@ func MergePart(ctx context.Context, req *protocol.MergePartReq) error {
 	// 删除文件缓存信息
 	txPipeline := conn.GetRedisClient(ctx).TxPipeline()
 	// 不删除键，因为可能还有上传的分片。按 score 删除，避免删除同 tusId
-	txPipeline.ZRemRangeByScore(ctx, fmt.Sprintf(conn.CacheKey_UploadPartFmt, req.FileId), "1", strconv.Itoa(len(result)+1))
+	txPipeline.ZRemRangeByScore(ctx, fmt.Sprintf(conn.CacheKey_UploadPartFmt, req.FileId), "1", strconv.Itoa(len(result)))
 	// 若删除失败也会在定时任务中删除
 	txPipeline.HDel(ctx, conn.CacheKey_UploadFiles, req.FileId)
 	_, err = txPipeline.Exec(ctx)
@@ -330,6 +333,8 @@ func Download(ctx context.Context, req *protocol.DownloadReq) (
 
 // CleanMultipartUpload 清理异常分片
 func CleanMultipartUpload(ctx context.Context) error {
+	log.Info(ctx, "start clean multipart upload")
+
 	// 获取所有文件缓存信息
 	result, err := conn.GetRedisClient(ctx).HGetAll(ctx, conn.CacheKey_UploadFiles).Result()
 	if err != nil {
@@ -341,8 +346,7 @@ func CleanMultipartUpload(ctx context.Context) error {
 	for fileId, fileInfoStr := range result {
 		func(fileId, fileInfoStr string) {
 			// 加锁，避免在合并分片
-			lock := conn.Lock(ctx, fileId, 0)
-			if !lock {
+			if !conn.Lock(ctx, fileId, 0) {
 				return
 			}
 			defer conn.Unlock(ctx, fileId)
@@ -360,8 +364,7 @@ func CleanMultipartUpload(ctx context.Context) error {
 
 			// 获取文件上传缓存信息
 			var fileInfo fileInfoCache
-			err = json.Unmarshal([]byte(fileInfoStr), &fileInfo)
-			if err != nil {
+			if err = json.Unmarshal([]byte(fileInfoStr), &fileInfo); err != nil {
 				log.Error(ctx, err)
 				return
 			}
@@ -383,10 +386,7 @@ func CleanMultipartUpload(ctx context.Context) error {
 				log.Error(ctx, err)
 				return
 			}
-			partIds := make([]string, len(members))
-			for i, v := range members {
-				partIds[i] = strings.Split(v, ",")[0]
-			}
+			partIds := gotools.ConvertSlice(members, func(e string) string { return strings.Split(e, ",")[0] })
 
 			// 删除分片
 			if len(partIds) > 0 {
@@ -405,8 +405,7 @@ func CleanMultipartUpload(ctx context.Context) error {
 
 			// 删除上传文件信息
 			txPipeline.HDel(ctx, conn.CacheKey_UploadFiles, fileId)
-			_, err = txPipeline.Exec(ctx)
-			if err != nil {
+			if _, err = txPipeline.Exec(ctx); err != nil {
 				log.Error(ctx, err)
 				return
 			}
@@ -440,10 +439,7 @@ func CleanMultipartUpload(ctx context.Context) error {
 			log.Error(ctx, err)
 			continue
 		}
-		partIds := make([]string, len(members))
-		for i, v := range members {
-			partIds[i] = strings.Split(v, ",")[0]
-		}
+		partIds := gotools.ConvertSlice(members, func(e string) string { return strings.Split(e, ",")[0] })
 
 		// 无分片处理
 		if len(partIds) <= 0 {
@@ -456,9 +452,8 @@ func CleanMultipartUpload(ctx context.Context) error {
 			continue
 		}
 
-		// 删除分片缓存
-		log.ErrorIf(ctx, conn.GetRedisClient(ctx).ZRem(ctx,
-			fmt.Sprintf(conn.CacheKey_UploadPartFmt, fileId),
+		// 删除分片缓存，根据 member 删除，避免有在上传分片
+		log.ErrorIf(ctx, conn.GetRedisClient(ctx).ZRem(ctx, fmt.Sprintf(conn.CacheKey_UploadPartFmt, fileId),
 			gotools.ConvertSlice(members, func(e string) any { return e })...).Err())
 
 		// 如果文件 id 不存在数据库中，则回收唯一 id。文件存在数据库中，说明合并文件分片时，还在上传文件分片。

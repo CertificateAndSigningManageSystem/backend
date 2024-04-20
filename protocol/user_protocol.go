@@ -14,6 +14,7 @@ package protocol
 
 import "mime/multipart"
 
+// RegisterReq 注册请求
 type RegisterReq struct {
 	NameZh    string                `json:"nameZh"`
 	NameEn    string                `json:"nameEn"`
@@ -22,18 +23,21 @@ type RegisterReq struct {
 	UserAgent string                `json:"userAgent"`
 }
 
+// LoginReq 登陆请求
 type LoginReq struct {
 	Name      string `json:"name"`
 	Password  string `json:"password"`
 	UserAgent string `json:"userAgent"`
 }
 
+// UserInfoRsp 用户信息响应
 type UserInfoRsp struct {
 	NameEn string `json:"nameEn"`
 	Avatar string `json:"avatar"`
 	NameZh string `json:"nameZh"`
 }
 
+// UpdateInfoReq 更新用户信息请求
 type UpdateInfoReq struct {
 	NameZh string `json:"nameZh"`
 	Avatar string `json:"avatar"`

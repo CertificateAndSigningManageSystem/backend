@@ -22,7 +22,7 @@ import (
 func initWebRoute(r *gin.RouterGroup) {
 	// 文件接口
 	upload := &api.FileAPI{}
-	uploadGroup := r.Group("/file", filter.WebAuthFilter)
+	uploadGroup := r.Group("/file", filter.DateCheckFilter, filter.WebAuthFilter)
 	uploadGroup.POST("/initialUpload", filter.AntiShakeFilter, upload.InitialUpload)
 	uploadGroup.PATCH("/uploadPart", upload.UploadPart)
 	uploadGroup.POST("/mergePart", upload.MergePart)
@@ -30,7 +30,7 @@ func initWebRoute(r *gin.RouterGroup) {
 
 	// 用户管理模块
 	user := &api.UserApi{}
-	userGroup := r.Group("/user")
+	userGroup := r.Group("/user", filter.DateCheckFilter)
 	userGroup.POST("/register", filter.TransactionFilter, user.Register)
 	userGroup.POST("/login", filter.TransactionFilter, user.Login)
 	userGroup.DELETE("/logout", filter.WebAuthFilter, filter.AntiShakeFilter, user.Logout)
