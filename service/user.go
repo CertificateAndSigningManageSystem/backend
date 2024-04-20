@@ -340,6 +340,18 @@ func UpdateInfo(ctx context.Context, req *protocol.UpdateInfoReq) error {
 		return errs.NewSystemBusyErr(err)
 	}
 
+	// 记录事件
+	err = conn.GetMySQLClient(ctx).Create(&model.TEvent{
+		Type:      model.TEvent_Type_ModifyUserInfo,
+		OccurTime: time.Now(),
+		UserId:    tuser.Id,
+		Content:   fmt.Sprintf("用户%d-%s修改个人信息，%s", tuser.Id, tuser.NameEn, tuser.NameZh),
+	}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
 	return nil
 }
 
@@ -374,6 +386,18 @@ func ChangePassword(ctx context.Context, req *protocol.ChangePasswordReq) error 
 	err = conn.GetMySQLClient(ctx).Model(&model.TUser{}).Where("id = ?", tuser.Id).UpdateColumns(map[string]any{
 		"passwd_digest": passwdDigest,
 		"passwd_salt":   salt,
+	}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	// 记录操作事件
+	err = conn.GetMySQLClient(ctx).Create(&model.TEvent{
+		Type:      model.TEvent_Type_ChangePasswd,
+		OccurTime: time.Now(),
+		UserId:    tuser.Id,
+		Content:   fmt.Sprintf("用户%d-%s修改密码，%s / %s", tuser.Id, tuser.NameEn, tuser.PasswdDigest, tuser.PasswdSalt),
 	}).Error
 	if err != nil {
 		log.Error(ctx, err)
@@ -466,6 +490,18 @@ func ChangeAvatar(ctx context.Context, req *protocol.ChangeAvatarReq) error {
 	}
 	if err = DeleteDBFile(ctx, tuser.Avatar); err != nil {
 		return err
+	}
+
+	// 记录事件
+	err = conn.GetMySQLClient(ctx).Create(&model.TEvent{
+		Type:      model.TEvent_Type_ModifyUserInfo,
+		OccurTime: time.Now(),
+		UserId:    tuser.Id,
+		Content:   fmt.Sprintf("用户%d-%s修改个人头像，%s / %s", tuser.Id, tuser.NameEn, toldFile.Name, tuser.Avatar),
+	}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
 	}
 
 	// 删除 tus 里的头像

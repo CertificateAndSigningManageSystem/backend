@@ -33,9 +33,9 @@ func initWebRoute(r *gin.RouterGroup) {
 	userGroup := r.Group("/user", filter.DateCheckFilter)
 	userGroup.POST("/register", filter.TransactionFilter, user.Register)
 	userGroup.POST("/login", filter.TransactionFilter, user.Login)
-	userGroup.DELETE("/logout", filter.WebAuthFilter, filter.AntiShakeFilter, user.Logout)
+	userGroup.DELETE("/logout", filter.WebAuthFilter, user.Logout)
 	userGroup.GET("/info", filter.WebAuthFilter, user.Info)
-	userGroup.PUT("/updateInfo", filter.WebAuthFilter, filter.AntiShakeFilter, user.UpdateInfo)
-	userGroup.POST("/changePassword", filter.WebAuthFilter, filter.AntiShakeFilter, user.ChangePassword)
+	userGroup.PUT("/updateInfo", filter.WebAuthFilter, filter.AntiShakeFilter, filter.TransactionFilter, user.UpdateInfo)
+	userGroup.POST("/changePassword", filter.WebAuthFilter, filter.AntiShakeFilter, filter.TransactionFilter, user.ChangePassword)
 	userGroup.PUT("/changeAvatar", filter.WebAuthFilter, filter.AntiShakeFilter, filter.TransactionFilter, user.ChangeAvatar)
 }
