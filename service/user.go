@@ -252,13 +252,27 @@ func Login(ctx context.Context, req *protocol.LoginReq) (session string, err err
 		return "", errs.NewSystemBusyErr(err)
 	}
 
-	// TODO: 多端登陆，踢出其他登陆会话。加锁，维度用户，redis 事务。
+	// 多端登陆，踢出其他登陆会话。加锁，维度用户，redis 事务
+	lockKey := fmt.Sprintf(conn.LockKey_UserLoginFmt, tuser.Id)
+	if !conn.Lock(ctx, lockKey, 12*time.Hour) {
+		return "", errs.ErrTooManyRequest
+	}
+	defer conn.Unlock(ctx, lockKey)
+	sessions, err := conn.GetRedisClient(ctx).Keys(ctx, fmt.Sprintf(conn.CacheKey_UserSessionFmt, tuser.NameEn, "*")).Result()
+	if err != nil {
+		log.Error(ctx, err)
+		return "", errs.NewSystemBusyErr(err)
+	}
+	txPipeline := conn.GetRedisClient(ctx).TxPipeline()
+	if len(sessions) > 0 {
+		txPipeline.Del(ctx, sessions...)
+	}
 
 	// 记录会话
 	session, sessionVal := createUserSession(ctx, tuser.Id, ctxs.RequestIP(ctx), req.UserAgent)
-	err = conn.GetRedisClient(ctx).SetEx(ctx,
-		fmt.Sprintf(conn.CacheKey_UserSessionFmt, tuser.NameEn, session), sessionVal, time.Hour*24).Err()
-	if err != nil {
+	txPipeline.SetEx(ctx,
+		fmt.Sprintf(conn.CacheKey_UserSessionFmt, tuser.NameEn, session), sessionVal, time.Hour*24)
+	if _, err = txPipeline.Exec(ctx); err != nil {
 		log.Error(ctx, err)
 		return "", errs.NewSystemBusyErr(err)
 	}
