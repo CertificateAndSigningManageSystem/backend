@@ -62,10 +62,11 @@ func (*UserApi) Register(c *gin.Context) {
 		return
 	}
 	req := &protocol.RegisterReq{
-		NameZh:   nameZhs[0],
-		NameEn:   nameEns[0],
-		Avatar:   files[0],
-		Password: passwds[0],
+		NameZh:    nameZhs[0],
+		NameEn:    nameEns[0],
+		Avatar:    files[0],
+		Password:  passwds[0],
+		UserAgent: c.Request.UserAgent(),
 	}
 
 	// 调用下游
@@ -94,6 +95,7 @@ func (*UserApi) Login(c *gin.Context) {
 	}
 
 	// 调用下游
+	req.UserAgent = c.Request.UserAgent()
 	session, err := service.Login(ctx, &req)
 	if err != nil {
 		util.FailByErr(c, err)

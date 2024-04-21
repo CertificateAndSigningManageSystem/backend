@@ -33,6 +33,7 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 
+	"backend/consts"
 	"backend/protocol"
 )
 
@@ -109,7 +110,7 @@ func InitialUpload(ctx context.Context, req *protocol.InitialUploadReq) (*protoc
 // UploadPart 上传分片
 func UploadPart(ctx context.Context, req *protocol.UploadPartReq) error {
 	// 校验参数
-	if req.Chunk == nil || req.ChunkSize <= 0 || req.ChunkNum <= 0 || len(req.FileId) != FileIdLength {
+	if req.Chunk == nil || req.ChunkSize <= 0 || req.ChunkNum <= 0 || len(req.FileId) != consts.FileIdLength {
 		return errs.NewParamsErr(nil)
 	}
 
@@ -186,7 +187,7 @@ func UploadPart(ctx context.Context, req *protocol.UploadPartReq) error {
 // MergePart 合并分片文件
 func MergePart(ctx context.Context, req *protocol.MergePartReq) error {
 	// 校验参数
-	if len(req.FileId) != FileIdLength {
+	if len(req.FileId) != consts.FileIdLength {
 		return errs.NewParamsErr(nil)
 	}
 
@@ -293,7 +294,7 @@ func Download(ctx context.Context, req *protocol.DownloadReq) (
 	data io.ReadCloser, fileName string, fileSize int64, err error) {
 
 	// 校验
-	if len(req.FileId) != FileIdLength {
+	if len(req.FileId) != consts.FileIdLength {
 		return nil, "", 0, errs.ErrFileNotExists
 	}
 	switch req.Type {

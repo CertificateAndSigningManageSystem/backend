@@ -22,3 +22,9 @@ type CreateReq struct {
 	Admins   []string
 	Members  []string
 }
+
+type UpdateReq struct {
+	Name    string   `json:"name"`
+	Admins  []string `json:"admins"`
+	Members []string `json:"members"`
+}

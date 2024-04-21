@@ -27,9 +27,10 @@ import (
 
 const (
 	IdScope_File = "file"
+	IdScope_App  = "app"
 )
 
-// GenerateId 生成唯一id
+// GenerateId 生成唯一 Id
 func GenerateId(ctx context.Context, scope string) (string, error) {
 	for {
 		id := strings.ReplaceAll(time.Now().Format("200601")+uuid.NewString(), "-", "")
@@ -45,7 +46,7 @@ func GenerateId(ctx context.Context, scope string) (string, error) {
 	}
 }
 
-// ReclaimId 回收id
+// ReclaimId 回收 Id
 func ReclaimId(ctx context.Context, scope, id string) error {
 	err := conn.GetRedisClient(ctx).SRem(ctx, fmt.Sprintf(conn.CacheKey_GenIdFmt, scope), id).Err()
 	if err != nil {

@@ -16,5 +16,8 @@ const (
 	// SessionKey 浏览器会话Cookie键名
 	SessionKey = "csms_session"
 	// SessionUser 浏览器会话用户Cookie键名
-	SessionUser = "csms_user"
+	SessionUser       = "csms_user"
+	AppIdLength       = 32
+	MaxLoginFailTimes = 3
+	FileIdLength      = 38
 )

@@ -57,27 +57,24 @@ func AuthenticateFilter(c *gin.Context) {
 
 	// 如果userId合法则校验权限和状态
 	if userId > 0 {
-		var tuser model.TUser
-		err := conn.GetMySQLClient(ctx).Where("id = ?", ctxs.UserId(ctx)).Find(&tuser).Error
+		// 获取 app 信息
+		appId := c.Param("appId")
+		var tapp model.TApp
+		err := conn.GetMySQLClient(ctx).Where("app_id = ?", appId).Find(&tapp).Error
 		if err != nil {
 			c.Abort()
 			log.Error(ctx, err)
 			util.FailByErr(c, errs.NewSystemBusyErr(err))
 			return
 		}
-		// 用户不存在，则限制请求
-		if tuser.Id <= 0 {
-			c.Abort()
-			util.FailByErr(c, errs.ErrIllegalRequest)
-			return
-		}
+
 		// 获取需要的权限项
-		index := authInfoDat.MatchesIndex(path)
+		index := authInfoDat.MatchesIndex(path[:len(path)-len(appId)-1])
 		// 需要权限
-		if index > 0 {
+		if index >= 0 {
 			// 检索数据库判断用户是否有权限
 			authorities := authInfoArr[index]
-			has, err := service.HasUserAnyAuthorities(ctx, userId, authorities...)
+			has, err := service.HasUserAnyAuthorities(ctx, userId, tapp.Id, authorities...)
 			if err != nil {
 				c.Abort()
 				util.FailByErr(c, errs.NewSystemBusyErr(err))
@@ -90,26 +87,17 @@ func AuthenticateFilter(c *gin.Context) {
 				return
 			}
 		}
+
+		ctx = ctxs.WithAppId(ctx, tapp.Id)
+		c.Request = c.Request.WithContext(ctx)
 	}
 
 	// 如果authId合法则校验权限和其应用状态
 	if authId > 0 {
-		authInfo, err := service.GetAuthInfoById(ctx, authId)
-		if err != nil {
-			c.Abort()
-			util.FailByErr(c, errs.NewSystemBusyErr(err))
-			return
-		}
-		// 凭证不存在，则限制请求
-		if authInfo.Id <= 0 {
-			c.Abort()
-			util.FailByErr(c, errs.ErrNoAuth)
-			return
-		}
 		// 获取需要的权限项
 		index := authInfoDat.MatchesIndex(path)
 		// 需要权限
-		if index > 0 {
+		if index >= 0 {
 			// 检索数据库判断用户是否有权限
 			authorities := authInfoArr[index]
 			has, err := service.HasAuthAnyAuthorities(ctx, authId, authorities...)

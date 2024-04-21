@@ -15,6 +15,8 @@ package route
 import (
 	"github.com/gin-gonic/gin"
 
+	"gitee.com/CertificateAndSigningManageSystem/common/model"
+
 	"backend/api"
 	"backend/filter"
 )
@@ -43,4 +45,6 @@ func initWebRoute(r *gin.RouterGroup) {
 	app := &api.AppApi{}
 	appGroup := r.Group("/app", filter.DateCheckFilter, filter.WebAuthFilter, filter.AntiShakeFilter)
 	appGroup.POST("/create", filter.TransactionFilter, app.Create)
+	filter.AddPathAuthorities("/web/app/update", []uint{uint(model.TUserRole_Role_AppAdmin)})
+	appGroup.POST("/update/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.Update)
 }

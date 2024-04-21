@@ -66,7 +66,7 @@ func InitialAntiShakeScript(ctx context.Context) {
 func AntiShakeFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// 执行Redis脚本
+	// 执行 Redis 脚本
 	userId := ctxs.UserId(ctx)
 	reqPath := ctxs.RequestPath(ctx)
 	b, err := conn.GetRedisClient(ctx).EvalSha(ctx, antiShakeRedisCmdSha,

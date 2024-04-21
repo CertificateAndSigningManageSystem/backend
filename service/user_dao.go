@@ -22,13 +22,13 @@ import (
 )
 
 // HasUserAnyAuthorities 判断userId是否具有authorities中任何一个角色
-func HasUserAnyAuthorities(ctx context.Context, userId uint, authorities ...uint) (bool, error) {
+func HasUserAnyAuthorities(ctx context.Context, userId, appId uint, authorities ...uint) (bool, error) {
 	if len(authorities) <= 0 {
 		return true, nil
 	}
 	var b bool
 	err := conn.GetMySQLClient(ctx).Model(&model.TUserRole{}).Select("count(id)").
-		Where("user_id = ? and role in ?", userId, authorities).Find(&b).Error
+		Where("user_id = ? and app_id = ? and role in ?", userId, appId, authorities).Find(&b).Error
 	if err != nil {
 		log.Error(ctx, err, userId, authorities)
 		return false, errs.NewSystemBusyErr(err)

@@ -32,7 +32,7 @@ import (
 	"backend/service"
 )
 
-// WebAuthFilter Web接口会话鉴权
+// WebAuthFilter Web 接口会话鉴权
 func WebAuthFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 	ip := ctxs.RequestIP(ctx)

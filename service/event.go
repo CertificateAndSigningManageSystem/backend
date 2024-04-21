@@ -27,8 +27,7 @@ func CreateEvent(ctx context.Context, e *model.TEvent) error {
 	err := conn.GetMySQLClient(ctx).Create(e).Error
 	if err != nil {
 		log.ErrorIf(ctx, conn.GetMySQLClient(ctxs.CloneCtx(ctx)).Table(e.TableName()).AutoMigrate(&model.TEvent{}))
-		err = conn.GetMySQLClient(ctx).Create(e).Error
-		if err != nil {
+		if err = conn.GetMySQLClient(ctx).Create(e).Error; err != nil {
 			return errs.NewSystemBusyErr(err)
 		}
 	}

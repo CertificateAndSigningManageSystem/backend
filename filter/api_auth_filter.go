@@ -60,7 +60,7 @@ return 0;`
 
 var apiAuthLimitScriptSha string
 
-// InitialAPIAuthLimitScript 获取Redis脚本Sha。
+// InitialAPIAuthLimitScript 获取 Redis 脚本 Sha。
 func InitialAPIAuthLimitScript(ctx context.Context) {
 	var err error
 	apiAuthLimitScriptSha, err = conn.GetRedisClient(ctx).ScriptLoad(ctx, apiAuthLimitScript).Result()
@@ -69,7 +69,7 @@ func InitialAPIAuthLimitScript(ctx context.Context) {
 	}
 }
 
-// APIAuthFilter API访问鉴权
+// APIAuthFilter API 访问鉴权
 func APIAuthFilter(c *gin.Context) {
 	ctx := c.Request.Context()
 

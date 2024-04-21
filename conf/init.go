@@ -40,14 +40,14 @@ type Log struct {
 	Debug    bool          `ini:"debug"`
 }
 
-// Redis Redis连接配置
+// Redis Redis 连接配置
 type Redis struct {
 	Addr   string `ini:"addr"`
 	Passwd string `ini:"passwd"`
 	DB     int    `ini:"db"`
 }
 
-// MySQL MySQL连接配置
+// MySQL MySQL 连接配置
 type MySQL struct {
 	User    string `ini:"user"`
 	Passwd  string `ini:"passwd"`
@@ -58,7 +58,7 @@ type MySQL struct {
 	MaxOpen int    `ini:"maxOpen"`
 }
 
-// RabbitMQ RabbitMQ相关配置
+// RabbitMQ RabbitMQ 相关配置
 type RabbitMQ struct {
 	URI string `ini:"uri"`
 }

@@ -45,12 +45,8 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
+	"backend/consts"
 	"backend/protocol"
-)
-
-const (
-	MaxLoginFailTimes = 3
-	FileIdLength      = 38
 )
 
 // SessionInfo 会话信息
@@ -203,7 +199,7 @@ func Login(ctx context.Context, req *protocol.LoginReq) (session string, err err
 		log.Error(ctx, err)
 		return "", errs.NewSystemBusyErr(err)
 	}
-	if loginFailTimes >= MaxLoginFailTimes {
+	if loginFailTimes >= consts.MaxLoginFailTimes {
 		return "", &errs.Error{
 			HTTPStatus: http.StatusForbidden,
 			Msg:        "今日限制登陆",

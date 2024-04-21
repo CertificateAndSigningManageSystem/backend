@@ -16,7 +16,7 @@ replace gitee.com/CertificateAndSigningManageSystem/common => ../common
 
 require (
 	gitee.com/CertificateAndSigningManageSystem/common v0.0.0-20240316090304-6eeff768e8f1
-	gitee.com/ivfzhou/double-array-trie v1.2.0
+	gitee.com/ivfzhou/double-array-trie v1.2.1
 	gitee.com/ivfzhou/gotools/v4 v4.0.2
 	gitee.com/ivfzhou/tus_client v0.4.1
 	github.com/gin-gonic/gin v1.9.1

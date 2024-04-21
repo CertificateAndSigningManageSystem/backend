@@ -189,6 +189,97 @@ func Create(ctx context.Context, req *protocol.CreateReq) (err error) {
 	return nil
 }
 
+// Update 更新应用
+func Update(ctx context.Context, req *protocol.UpdateReq) (err error) {
+	// 校验
+	appId := ctxs.AppId(ctx)
+	if len(req.Name) <= 0 || appId <= 0 {
+		return errs.NewParamsErr(nil)
+	}
+	adminNames := gotools.DropSliceZero(gotools.DistinctSlice(req.Admins))
+	memberNames := gotools.DropSliceZero(gotools.DistinctSlice(req.Members))
+	var admins []*model.TUser
+	if len(adminNames) > 0 {
+		if err = conn.GetMySQLClient(ctx).Where("name_en in ?", adminNames).Find(&admins).Error; err != nil {
+			log.Error(ctx, err)
+			return errs.NewSystemBusyErr(err)
+		}
+		if len(adminNames) != len(admins) {
+			return errs.NewParamsErrMsg("选择了不存在的用户")
+		}
+	}
+	var members []*model.TUser
+	if len(memberNames) > 0 {
+		if err = conn.GetMySQLClient(ctx).Where("name_en in ?", memberNames).Find(&members).Error; err != nil {
+			log.Error(ctx, err)
+			return errs.NewSystemBusyErr(err)
+		}
+		if len(memberNames) != len(members) {
+			return errs.NewParamsErrMsg("选择了不存在的用户")
+		}
+	}
+
+	// 更新应用信息表记录
+	var tapp model.TApp
+	if err = conn.GetMySQLClient(ctx).Where("id = ?", appId).Find(&tapp).Error; err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	if tapp.Status != model.TApp_Status_OK {
+		return errs.NewParamsErrMsg("应用信息不可更改")
+	}
+	err = conn.GetMySQLClient(ctx).Model(&model.TApp{}).Where("id = ?", tapp.Id).UpdateColumn("name", req.Name).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	// 更新用户角色表记录
+	if err = conn.GetMySQLClient(ctx).Where("app_id = ?", tapp.Id).Delete(&model.TUserRole{}).Error; err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	tuserRoles := make([]*model.TUserRole, 0, len(admins)+len(members)+1)
+	tuserRoles = append(tuserRoles, &model.TUserRole{
+		UserId: tapp.UserId,
+		AppId:  tapp.Id,
+		Role:   model.TUserRole_Role_AppAdmin,
+	})
+	gotools.ForeachSlice(admins, func(e *model.TUser) {
+		tuserRoles = append(tuserRoles, &model.TUserRole{
+			UserId: e.Id,
+			AppId:  tapp.Id,
+			Role:   model.TUserRole_Role_AppAdmin,
+		})
+	})
+	gotools.ForeachSlice(members, func(e *model.TUser) {
+		tuserRoles = append(tuserRoles, &model.TUserRole{
+			UserId: e.Id,
+			AppId:  tapp.Id,
+			Role:   model.TUserRole_Role_AppMember,
+		})
+	})
+	if err = conn.GetMySQLClient(ctx).CreateInBatches(tuserRoles, len(tuserRoles)).Error; err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	// 记录操作事件
+	err = conn.GetMySQLClient(ctx).Create(&model.TEvent{
+		Type:      model.TEvent_Type_UpdateApp,
+		OccurTime: time.Now(),
+		UserId:    ctxs.UserId(ctx),
+		AppId:     tapp.Id,
+		Content:   fmt.Sprintf("用户%s修改应用信息%s / %s", ctxs.UserName(ctx), tapp.Name, tapp.AppId),
+	}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	return nil
+}
+
 // IsValidAppLogo 头像是否合规
 func IsValidAppLogo(ctx context.Context, file *multipart.FileHeader) ([]byte, string, bool, error) {
 	if file.Size <= 0 {

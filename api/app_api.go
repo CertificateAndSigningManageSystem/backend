@@ -81,3 +81,24 @@ func (*AppApi) Create(c *gin.Context) {
 
 	util.SuccessMsg(c, "创建成功")
 }
+
+// Update 更新应用
+func (*AppApi) Update(c *gin.Context) {
+	ctx := c.Request.Context()
+	// 解析请求参数
+	var req protocol.UpdateReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		log.Warn(ctx, err)
+		util.FailByErr(c, errs.NewParamsErr(err))
+		return
+	}
+
+	// 调用下游
+	if err = service.Update(ctx, &req); err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.SuccessMsg(c, "修改成功")
+}
