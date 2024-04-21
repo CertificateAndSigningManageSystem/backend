@@ -102,3 +102,17 @@ func (*AppApi) Update(c *gin.Context) {
 
 	util.SuccessMsg(c, "修改成功")
 }
+
+// Delete 注销应用
+func (*AppApi) Delete(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// 调用下游
+	err := service.Delete(ctx)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.SuccessMsg(c, "注销成功")
+}

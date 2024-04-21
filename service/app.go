@@ -234,6 +234,8 @@ func Update(ctx context.Context, req *protocol.UpdateReq) (err error) {
 		return errs.NewSystemBusyErr(err)
 	}
 
+	// TODO: 待办
+
 	// 更新用户角色表记录
 	if err = conn.GetMySQLClient(ctx).Where("app_id = ?", tapp.Id).Delete(&model.TUserRole{}).Error; err != nil {
 		log.Error(ctx, err)
@@ -276,6 +278,51 @@ func Update(ctx context.Context, req *protocol.UpdateReq) (err error) {
 		log.Error(ctx, err)
 		return errs.NewSystemBusyErr(err)
 	}
+
+	return nil
+}
+
+// Delete 注销应用
+func Delete(ctx context.Context) error {
+	// 校验
+	appId := ctxs.AppId(ctx)
+	if appId <= 0 {
+		return errs.NewParamsErr(nil)
+	}
+
+	// 查库
+	var tapp model.TApp
+	err := conn.GetMySQLClient(ctx).Where("id = ?", appId).Find(&tapp).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	if tapp.Status != model.TApp_Status_OK {
+		return errs.NewParamsErrMsg("不可更改应用信息")
+	}
+
+	// 更新应用表记录
+	err = conn.GetMySQLClient(ctx).Model(&model.TApp{}).Where("id = ?", tapp.Id).
+		UpdateColumn("status", model.TApp_Status_Locked).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	// 新增事件表记录
+	err = CreateEvent(ctx, &model.TEvent{
+		Type:      model.TEvent_Type_LockApp,
+		OccurTime: time.Now(),
+		UserId:    ctxs.UserId(ctx),
+		AppId:     tapp.Id,
+		Content:   fmt.Sprintf("用户%s注销应用 %s / %s", ctxs.UserName(ctx), tapp.Name, tapp.AppId),
+	})
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	// TODO: 待办
 
 	return nil
 }
