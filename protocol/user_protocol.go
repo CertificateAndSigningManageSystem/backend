@@ -16,11 +16,11 @@ import "mime/multipart"
 
 // RegisterReq 注册请求
 type RegisterReq struct {
-	NameZh    string                `json:"nameZh"`
-	NameEn    string                `json:"nameEn"`
-	Avatar    *multipart.FileHeader `json:"-"`
-	Password  string                `json:"password"`
-	UserAgent string                `json:"userAgent"`
+	NameZh    string
+	NameEn    string
+	Avatar    *multipart.FileHeader
+	Password  string
+	UserAgent string
 }
 
 // LoginReq 登陆请求
@@ -51,5 +51,5 @@ type ChangePasswordReq struct {
 
 // ChangeAvatarReq 修改头像请求
 type ChangeAvatarReq struct {
-	Avatar *multipart.FileHeader `json:"-"`
+	Avatar *multipart.FileHeader
 }

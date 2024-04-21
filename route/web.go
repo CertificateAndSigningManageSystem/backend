@@ -21,12 +21,12 @@ import (
 
 func initWebRoute(r *gin.RouterGroup) {
 	// 文件接口
-	upload := &api.FileAPI{}
-	uploadGroup := r.Group("/file", filter.DateCheckFilter, filter.WebAuthFilter)
-	uploadGroup.POST("/initialUpload", filter.AntiShakeFilter, upload.InitialUpload)
-	uploadGroup.PATCH("/uploadPart", upload.UploadPart)
-	uploadGroup.POST("/mergePart", upload.MergePart)
-	uploadGroup.GET("/download", upload.Download)
+	file := &api.FileAPI{}
+	fileGroup := r.Group("/file", filter.DateCheckFilter, filter.WebAuthFilter)
+	fileGroup.POST("/initialUpload", filter.AntiShakeFilter, file.InitialUpload)
+	fileGroup.PATCH("/uploadPart", file.UploadPart)
+	fileGroup.POST("/mergePart", file.MergePart)
+	fileGroup.GET("/download", file.Download)
 
 	// 用户管理模块
 	user := &api.UserApi{}
@@ -38,4 +38,9 @@ func initWebRoute(r *gin.RouterGroup) {
 	userGroup.PUT("/updateInfo", filter.WebAuthFilter, filter.AntiShakeFilter, filter.TransactionFilter, user.UpdateInfo)
 	userGroup.POST("/changePassword", filter.WebAuthFilter, filter.AntiShakeFilter, filter.TransactionFilter, user.ChangePassword)
 	userGroup.PUT("/changeAvatar", filter.WebAuthFilter, filter.AntiShakeFilter, filter.TransactionFilter, user.ChangeAvatar)
+
+	// 应用管理模块
+	app := &api.AppApi{}
+	appGroup := r.Group("/app", filter.DateCheckFilter, filter.WebAuthFilter, filter.AntiShakeFilter)
+	appGroup.POST("/create", filter.TransactionFilter, app.Create)
 }

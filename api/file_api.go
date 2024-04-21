@@ -138,8 +138,7 @@ func (*FileAPI) MergePart(c *gin.Context) {
 	fileId := c.PostForm("fileId")
 
 	// 调用下游
-	err := service.MergePart(ctx, &protocol.MergePartReq{FileId: fileId})
-	if err != nil {
+	if err := service.MergePart(ctx, &protocol.MergePartReq{FileId: fileId}); err != nil {
 		util.FailByErr(c, err)
 		return
 	}

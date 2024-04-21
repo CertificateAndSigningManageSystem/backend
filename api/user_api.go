@@ -56,7 +56,7 @@ func (*UserApi) Register(c *gin.Context) {
 		util.Fail(c, http.StatusExpectationFailed, "无密码")
 		return
 	}
-	files := form.File["file"]
+	files := form.File["avatar"]
 	if len(files) != 1 {
 		util.Fail(c, http.StatusExpectationFailed, "无头像")
 		return
@@ -114,8 +114,7 @@ func (*UserApi) Logout(c *gin.Context) {
 	user, _ := c.Cookie(consts.SessionUser)
 
 	// 调用下游
-	err := service.Logout(ctx, user, session)
-	if err != nil {
+	if err := service.Logout(ctx, user, session); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
@@ -153,8 +152,7 @@ func (*UserApi) UpdateInfo(c *gin.Context) {
 	}
 
 	// 调用下游
-	err = service.UpdateInfo(ctx, &req)
-	if err != nil {
+	if err = service.UpdateInfo(ctx, &req); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
@@ -176,8 +174,7 @@ func (*UserApi) ChangePassword(c *gin.Context) {
 	}
 
 	// 调用下游
-	err = service.ChangePassword(ctx, &req)
-	if err != nil {
+	if err = service.ChangePassword(ctx, &req); err != nil {
 		util.FailByErr(c, err)
 		return
 	}

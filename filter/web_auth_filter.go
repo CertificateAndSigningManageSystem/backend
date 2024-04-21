@@ -118,6 +118,7 @@ func WebAuthFilter(c *gin.Context) {
 	}
 
 	ctx = ctxs.WithUserId(ctx, tuser.Id)
+	ctx = ctxs.WithUserName(ctx, tuser.NameEn)
 	c.Request = c.Request.WithContext(ctx)
 	c.Next()
 }
