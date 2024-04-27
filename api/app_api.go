@@ -116,3 +116,25 @@ func (*AppApi) Delete(c *gin.Context) {
 
 	util.SuccessMsg(c, "注销成功")
 }
+
+// ChangeLogo 修改应用图标
+func (*AppApi) ChangeLogo(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// 解析数据
+	var req protocol.ChangeLogoReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		log.Warn(ctx, err)
+		util.FailByErr(c, errs.NewParamsErr(err))
+		return
+	}
+
+	// 调用下游
+	if err = service.ChangeLogo(ctx, &req); err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.SuccessMsg(c, "修改成功")
+}

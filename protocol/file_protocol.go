@@ -17,10 +17,12 @@ import "io"
 const (
 	// DownloadType_UserAvatar 下载用户头像
 	DownloadType_UserAvatar = 1 + iota
+	DownloadType_AppLogo
 )
 
 const (
 	UploadType_UserAvatar = 1 + iota
+	UploadType_AppLogo
 )
 
 // InitialUploadReq 初始化分片上传请求参数

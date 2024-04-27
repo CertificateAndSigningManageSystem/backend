@@ -38,6 +38,7 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 
+	"backend/consts"
 	"backend/protocol"
 )
 
@@ -323,6 +324,47 @@ func Delete(ctx context.Context) error {
 	}
 
 	// TODO: 待办
+
+	return nil
+}
+
+// ChangeLogo 修改图标
+func ChangeLogo(ctx context.Context, req *protocol.ChangeLogoReq) error {
+	// 校验
+	if len(req.LogoId) != consts.FileIdLength {
+		return errs.NewParamsErr(nil)
+	}
+	appId := ctxs.AppId(ctx)
+	if appId <= 0 {
+		return errs.NewParamsErr(nil)
+	}
+	tfile, err := QueryDBFileById(ctx, req.LogoId)
+	if err != nil {
+		return err
+	}
+	if tfile.Id <= 0 {
+		return errs.NewParamsErr(nil)
+	}
+
+	// 更新库表
+	err = conn.GetMySQLClient(ctx).Model(&model.TApp{}).Where("id = ?", appId).UpdateColumn("avatar", req.LogoId).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+
+	// 记录事件
+	userId := ctxs.UserId(ctx)
+	err = CreateEvent(ctx, &model.TEvent{
+		Type:      model.TEvent_Type_UpdateApp,
+		OccurTime: time.Now(),
+		UserId:    userId,
+		AppId:     appId,
+		Content:   fmt.Sprintf("用户%d更新应用%d图标 %s", userId, appId, req.LogoId),
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

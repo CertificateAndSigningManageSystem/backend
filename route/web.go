@@ -45,8 +45,10 @@ func initWebRoute(r *gin.RouterGroup) {
 	app := &api.AppApi{}
 	appGroup := r.Group("/app", filter.DateCheckFilter, filter.WebAuthFilter, filter.AntiShakeFilter)
 	appGroup.POST("/create", filter.TransactionFilter, app.Create)
-	filter.AddPathAuthorities("/web/app/update", []uint{uint(model.TUserRole_Role_Admin), uint(model.TUserRole_Role_AppAdmin)})
+	filter.AddPathAuthorities("/web/app/update", model.TUserRole_Role_AppAdmin)
 	appGroup.POST("/update/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.Update)
-	filter.AddPathAuthorities("/web/app/delete", []uint{uint(model.TUserRole_Role_Admin), uint(model.TUserRole_Role_AppAdmin)})
+	filter.AddPathAuthorities("/web/app/delete", model.TUserRole_Role_AppAdmin)
 	appGroup.DELETE("/delete/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.Delete)
+	filter.AddPathAuthorities("/web/app/changeLogo", model.TUserRole_Role_AppAdmin)
+	appGroup.PUT("/changeLogo/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.ChangeLogo)
 }

@@ -56,9 +56,7 @@ func InitialUpload(ctx context.Context, req *protocol.InitialUploadReq) (*protoc
 	}
 	switch req.Type {
 	case protocol.UploadType_UserAvatar:
-		if ctxs.UserId(ctx) < 0 {
-			return nil, errs.ErrIllegalRequest
-		}
+	case protocol.UploadType_AppLogo:
 	default:
 		return nil, errs.ErrIllegalRequest
 	}
@@ -469,5 +467,40 @@ func CleanMultipartUpload(ctx context.Context) error {
 
 	}
 
+	return nil
+}
+
+// CreateDBFile 数据库新增文件信息实体
+func CreateDBFile(ctx context.Context, f *model.TFile) error {
+	err := conn.GetMySQLClient(ctx).Create(f).Error
+	if err != nil {
+		log.ErrorIf(ctx, conn.GetMySQLClient(ctxs.CloneCtx(ctx)).Table(f.TableName()).AutoMigrate(&model.TFile{}))
+		err = conn.GetMySQLClient(ctx).Create(f).Error
+		if err != nil {
+			return errs.NewSystemBusyErr(err)
+		}
+	}
+	return nil
+}
+
+// QueryDBFileById 检索文件
+func QueryDBFileById(ctx context.Context, fileId string) (*model.TFile, error) {
+	f := &model.TFile{FileId: fileId}
+	err := conn.GetMySQLClient(ctx).Where("file_id = ?", fileId).Find(f).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, errs.NewSystemBusyErr(err)
+	}
+	return f, nil
+}
+
+// DeleteDBFile 删除文件
+func DeleteDBFile(ctx context.Context, fileId string) error {
+	f := &model.TFile{FileId: fileId}
+	err := conn.GetMySQLClient(ctx).Table(f.TableName()).Where("file_id = ?", fileId).Delete(&model.TFile{}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
 	return nil
 }

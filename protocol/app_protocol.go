@@ -23,8 +23,14 @@ type CreateReq struct {
 	Members  []string
 }
 
+// UpdateReq 更新应用信息请求
 type UpdateReq struct {
 	Name    string   `json:"name"`
 	Admins  []string `json:"admins"`
 	Members []string `json:"members"`
+}
+
+// ChangeLogoReq 修改应用图标请求
+type ChangeLogoReq struct {
+	LogoId string `json:"logoId"`
 }

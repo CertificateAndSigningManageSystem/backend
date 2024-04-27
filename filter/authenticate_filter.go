@@ -14,6 +14,7 @@ package filter
 
 import (
 	double_array_trie "gitee.com/ivfzhou/double-array-trie"
+	"gitee.com/ivfzhou/gotools/v4"
 	"github.com/gin-gonic/gin"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
@@ -44,8 +45,10 @@ func InitialPathAuthoritiesDAT() {
 }
 
 // AddPathAuthorities 添加请求权限
-func AddPathAuthorities(path string, auths []uint) {
-	pathToAuthorities[path] = auths
+func AddPathAuthorities(path string, auths ...uint8) {
+	pathToAuthorities[path] = append(pathToAuthorities[path], gotools.ConvertSlice(auths, func(e uint8) uint {
+		return uint(e)
+	})...)
 }
 
 // AuthenticateFilter 鉴权函数
@@ -74,7 +77,7 @@ func AuthenticateFilter(c *gin.Context) {
 		if index >= 0 {
 			// 检索数据库判断用户是否有权限
 			authorities := authInfoArr[index]
-			has, err := service.HasUserAnyAuthorities(ctx, userId, tapp.Id, authorities...)
+			has, err := service.HasUserRight(ctx, userId, tapp.Id, authorities...)
 			if err != nil {
 				c.Abort()
 				util.FailByErr(c, errs.NewSystemBusyErr(err))

@@ -614,6 +614,26 @@ func IsValidUserNameEn(_ context.Context, nameEn string) bool {
 	return true
 }
 
+// HasUserRight 判断userId是否具有authorities中任何一个角色
+func HasUserRight(ctx context.Context, userId, appId uint, authorities ...uint) (bool, error) {
+	if len(authorities) <= 0 {
+		return true, nil
+	}
+	var b bool
+	query := conn.GetMySQLClient(ctx).Model(&model.TUserRole{}).Select("count(id) > 0").
+		Where("user_id = ? and app_id = ? and role in ?", userId, appId, authorities).
+		Or("user_id = ? and role = ?", userId, model.TUserRole_Role_SuperAdmin)
+	if gotools.Contains(authorities, uint(model.TUserRole_Role_Admin)) {
+		query = query.Or("user_id = ? and role = ?", userId, model.TUserRole_Role_Admin)
+	}
+	err := query.Find(&b).Error
+	if err != nil {
+		log.Error(ctx, err, userId, authorities)
+		return false, errs.NewSystemBusyErr(err)
+	}
+	return b, nil
+}
+
 // 创建用户会话
 func createUserSession(_ context.Context, uid uint, ip, userAgent string) (session, sessionVal string) {
 	session = gotools.RandomCharsCaseInsensitive(128)
