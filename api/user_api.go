@@ -61,7 +61,7 @@ func (*UserApi) Register(c *gin.Context) {
 		util.Fail(c, http.StatusExpectationFailed, "无头像")
 		return
 	}
-	req := &protocol.RegisterReq{
+	req := &protocol.User_RegisterReq{
 		NameZh:    nameZhs[0],
 		NameEn:    nameEns[0],
 		Avatar:    files[0],
@@ -70,7 +70,7 @@ func (*UserApi) Register(c *gin.Context) {
 	}
 
 	// 调用下游
-	session, err := service.Register(ctx, req)
+	session, err := service.User_Register(ctx, req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
@@ -86,7 +86,7 @@ func (*UserApi) Login(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取请求参数
-	var req protocol.LoginReq
+	var req protocol.User_LoginReq
 	err := c.ShouldBind(&req)
 	if err != nil {
 		log.Warn(ctx, err)
@@ -96,7 +96,7 @@ func (*UserApi) Login(c *gin.Context) {
 
 	// 调用下游
 	req.UserAgent = c.Request.UserAgent()
-	session, err := service.Login(ctx, &req)
+	session, err := service.User_Login(ctx, &req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
@@ -116,7 +116,7 @@ func (*UserApi) Logout(c *gin.Context) {
 	user, _ := c.Cookie(consts.SessionUser)
 
 	// 调用下游
-	if err := service.Logout(ctx, user, session); err != nil {
+	if err := service.User_Logout(ctx, user, session); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
@@ -131,7 +131,7 @@ func (*UserApi) Info(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 调用下游
-	rsp, err := service.GetUserInfo(ctx)
+	rsp, err := service.User_GetInfo(ctx)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
@@ -145,7 +145,7 @@ func (*UserApi) UpdateInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 解析请求参数
-	var req protocol.UpdateInfoReq
+	var req protocol.User_UpdateInfoReq
 	err := c.ShouldBind(&req)
 	if err != nil {
 		log.Warn(ctx, err)
@@ -154,7 +154,7 @@ func (*UserApi) UpdateInfo(c *gin.Context) {
 	}
 
 	// 调用下游
-	if err = service.UpdateInfo(ctx, &req); err != nil {
+	if err = service.User_UpdateInfo(ctx, &req); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
@@ -167,7 +167,7 @@ func (*UserApi) ChangePassword(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 解析请求参数
-	var req protocol.ChangePasswordReq
+	var req protocol.User_ChangePasswordReq
 	err := c.ShouldBind(&req)
 	if err != nil {
 		log.Warn(ctx, err)
@@ -176,7 +176,7 @@ func (*UserApi) ChangePassword(c *gin.Context) {
 	}
 
 	// 调用下游
-	if err = service.ChangePassword(ctx, &req); err != nil {
+	if err = service.User_ChangePassword(ctx, &req); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
@@ -203,7 +203,7 @@ func (*UserApi) ChangeAvatar(c *gin.Context) {
 	file := files[0]
 
 	// 调用下游
-	err = service.ChangeAvatar(ctx, &protocol.ChangeAvatarReq{
+	err = service.User_ChangeAvatar(ctx, &protocol.User_ChangeAvatarReq{
 		Avatar: file,
 	})
 	if err != nil {

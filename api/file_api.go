@@ -34,15 +34,15 @@ type FileAPI struct{}
 //	@Tags		file-api
 //	@Accept		json
 //	@Produce	json
-//	@Param		Authorization	header		string						true	"jwt凭证"
-//	@Param		reqBody			body		protocol.InitialUploadReq	true	"reqBody"
-//	@Success	200				{object}	protocol.InitialUploadRsp
+//	@Param		Authorization	header		string							true	"jwt凭证"
+//	@Param		reqBody			body		protocol.File_InitialUploadReq	true	"reqBody"
+//	@Success	200				{object}	protocol.File_InitialUploadRsp
 //	@Router		/api/file/initialUpload [post]
 func (*FileAPI) InitialUpload(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取请求参数
-	var req protocol.InitialUploadReq
+	var req protocol.File_InitialUploadReq
 	err := c.ShouldBind(&req)
 	if err != nil {
 		log.Warn(ctx, err)
@@ -51,7 +51,7 @@ func (*FileAPI) InitialUpload(c *gin.Context) {
 	}
 
 	// 调用下游
-	rsp, err := service.InitialUpload(ctx, &req)
+	rsp, err := service.File_InitialUpload(ctx, &req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
@@ -108,7 +108,7 @@ func (*FileAPI) UploadPart(c *gin.Context) {
 	chunkNum, _ := strconv.Atoi(chunkNums[0])
 
 	// 调用下游
-	err = service.UploadPart(ctx, &protocol.UploadPartReq{
+	err = service.File_UploadPart(ctx, &protocol.File_UploadPartReq{
 		FileId:    fileId,
 		ChunkNum:  chunkNum,
 		ChunkSize: int(file.Size),
@@ -138,7 +138,7 @@ func (*FileAPI) MergePart(c *gin.Context) {
 	fileId := c.PostForm("fileId")
 
 	// 调用下游
-	if err := service.MergePart(ctx, &protocol.MergePartReq{FileId: fileId}); err != nil {
+	if err := service.File_MergePart(ctx, &protocol.File_MergePartReq{FileId: fileId}); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
@@ -159,7 +159,7 @@ func (*FileAPI) Download(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 获取请求参数
-	var req protocol.DownloadReq
+	var req protocol.File_DownloadReq
 	err := c.ShouldBind(&req)
 	if err != nil {
 		log.Warn(ctx, err)
@@ -168,7 +168,7 @@ func (*FileAPI) Download(c *gin.Context) {
 	}
 
 	// 调用下游
-	data, fileName, fileSize, err := service.Download(ctx, &req)
+	data, fileName, fileSize, err := service.File_Download(ctx, &req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -48,15 +49,21 @@ type fileInfoCache struct {
 	Size       int    `json:"size,omitempty"`
 }
 
-// InitialUpload 初始化分片上传
-func InitialUpload(ctx context.Context, req *protocol.InitialUploadReq) (*protocol.InitialUploadRsp, error) {
+// File_InitialUpload 初始化分片上传
+func File_InitialUpload(ctx context.Context, req *protocol.File_InitialUploadReq) (*protocol.File_InitialUploadRsp, error) {
 	// 校验参数
 	if len(req.SHA1) != 40 || len(req.SHA256) != 64 || len(req.MD5) != 32 || len(req.Name) <= 0 || req.Size <= 0 {
 		return nil, errs.NewParamsErr(nil)
 	}
 	switch req.Type {
-	case protocol.UploadType_UserAvatar:
-	case protocol.UploadType_AppLogo:
+	case protocol.File_UploadType_UserAvatar:
+		if !IsValidPicExt(ctx, req.Name) {
+			return nil, errs.ErrIllegalRequest
+		}
+	case protocol.File_UploadType_AppLogo:
+		if !IsValidPicExt(ctx, req.Name) {
+			return nil, errs.ErrIllegalRequest
+		}
 	default:
 		return nil, errs.ErrIllegalRequest
 	}
@@ -71,7 +78,7 @@ func InitialUpload(ctx context.Context, req *protocol.InitialUploadReq) (*protoc
 	}
 	// 存在该文件，不必上传
 	if file.Id > 0 {
-		return &protocol.InitialUploadRsp{
+		return &protocol.File_InitialUploadRsp{
 			Id:     file.FileId,
 			Exists: true,
 		}, nil
@@ -102,11 +109,11 @@ func InitialUpload(ctx context.Context, req *protocol.InitialUploadReq) (*protoc
 		return nil, errs.NewSystemBusyErr(err)
 	}
 
-	return &protocol.InitialUploadRsp{Id: id}, nil
+	return &protocol.File_InitialUploadRsp{Id: id}, nil
 }
 
-// UploadPart 上传分片
-func UploadPart(ctx context.Context, req *protocol.UploadPartReq) error {
+// File_UploadPart 上传分片
+func File_UploadPart(ctx context.Context, req *protocol.File_UploadPartReq) error {
 	// 校验参数
 	if req.Chunk == nil || req.ChunkSize <= 0 || req.ChunkNum <= 0 || len(req.FileId) != consts.FileIdLength {
 		return errs.NewParamsErr(nil)
@@ -182,8 +189,8 @@ func UploadPart(ctx context.Context, req *protocol.UploadPartReq) error {
 	return nil
 }
 
-// MergePart 合并分片文件
-func MergePart(ctx context.Context, req *protocol.MergePartReq) error {
+// File_MergePart 合并分片文件
+func File_MergePart(ctx context.Context, req *protocol.File_MergePartReq) error {
 	// 校验参数
 	if len(req.FileId) != consts.FileIdLength {
 		return errs.NewParamsErr(nil)
@@ -287,8 +294,8 @@ func MergePart(ctx context.Context, req *protocol.MergePartReq) error {
 	return nil
 }
 
-// Download 下载文件
-func Download(ctx context.Context, req *protocol.DownloadReq) (
+// File_Download 下载文件
+func File_Download(ctx context.Context, req *protocol.File_DownloadReq) (
 	data io.ReadCloser, fileName string, fileSize int64, err error) {
 
 	// 校验
@@ -296,7 +303,7 @@ func Download(ctx context.Context, req *protocol.DownloadReq) (
 		return nil, "", 0, errs.ErrFileNotExists
 	}
 	switch req.Type {
-	case protocol.DownloadType_UserAvatar:
+	case protocol.File_DownloadType_UserAvatar:
 		// 查库
 		var tuser model.TUser
 		err = conn.GetMySQLClient(ctx).Where("id = ?", ctxs.UserId(ctx)).Find(&tuser).Error
@@ -305,6 +312,26 @@ func Download(ctx context.Context, req *protocol.DownloadReq) (
 			return nil, "", 0, errs.NewSystemBusyErr(err)
 		}
 		if tuser.Avatar != req.FileId {
+			return nil, "", 0, errs.NewParamsErr(nil)
+		}
+	case protocol.File_DownloadType_AppLogo:
+		// 查库
+		var tapp model.TApp
+		err = conn.GetMySQLClient(ctx).Where("app_id = ?", req.AppId).Find(&tapp).Error
+		if err != nil {
+			log.Error(ctx, err)
+			return nil, "", 0, errs.NewSystemBusyErr(err)
+		}
+		if tapp.Avatar != req.FileId {
+			return nil, "", 0, errs.NewParamsErr(nil)
+		}
+		has, err := HasUserRight(ctx, ctxs.UserId(ctx), tapp.Id,
+			uint(model.TUserRole_Role_Admin), uint(model.TUserRole_Role_AppAdmin), uint(model.TUserRole_Role_AppMember))
+		if err != nil {
+			log.Error(ctx, err)
+			return nil, "", 0, errs.NewSystemBusyErr(err)
+		}
+		if !has {
 			return nil, "", 0, errs.NewParamsErr(nil)
 		}
 	default:
@@ -503,4 +530,12 @@ func DeleteDBFile(ctx context.Context, fileId string) error {
 		return errs.NewSystemBusyErr(err)
 	}
 	return nil
+}
+
+func IsValidPicExt(ctx context.Context, fileName string) bool {
+	ext := strings.ToLower(filepath.Ext(fileName))
+	if ext == ".jpg" {
+		ext = ".jpeg"
+	}
+	return gotools.Contains(consts.PicExts, ext)
 }

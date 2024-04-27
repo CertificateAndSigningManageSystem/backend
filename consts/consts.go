@@ -21,3 +21,5 @@ const (
 	MaxLoginFailTimes = 3
 	FileIdLength      = 38
 )
+
+var PicExts = []string{".jepg", ".png", ".gif"}

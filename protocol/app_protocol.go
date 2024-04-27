@@ -14,8 +14,8 @@ package protocol
 
 import "mime/multipart"
 
-// CreateReq 创建应用请求
-type CreateReq struct {
+// App_CreateReq 创建应用请求
+type App_CreateReq struct {
 	Name     string
 	Platform int
 	Logo     *multipart.FileHeader
@@ -23,14 +23,30 @@ type CreateReq struct {
 	Members  []string
 }
 
-// UpdateReq 更新应用信息请求
-type UpdateReq struct {
+// App_UpdateReq 更新应用信息请求
+type App_UpdateReq struct {
 	Name    string   `json:"name"`
 	Admins  []string `json:"admins"`
 	Members []string `json:"members"`
 }
 
-// ChangeLogoReq 修改应用图标请求
-type ChangeLogoReq struct {
+// App_ChangeLogoReq 修改应用图标请求
+type App_ChangeLogoReq struct {
 	LogoId string `json:"logoId"`
+}
+
+// App_InfoRsp 应用信息响应
+type App_InfoRsp struct {
+	AppId    string `json:"appId,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Avatar   string `json:"avatar,omitempty"`
+	Platform int    `json:"platform,omitempty"`
+	Admins   []*struct {
+		NameEn string `json:"nameEn,omitempty"`
+		NameZn string `json:"nameZh,omitempty"`
+	} `json:"admins,omitempty"`
+	Members []*struct {
+		NameEn string `json:"nameEn,omitempty"`
+		NameZn string `json:"nameZh,omitempty"`
+	} `json:"members,omitempty"`
 }

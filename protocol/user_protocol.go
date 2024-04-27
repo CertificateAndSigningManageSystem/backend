@@ -14,8 +14,8 @@ package protocol
 
 import "mime/multipart"
 
-// RegisterReq 注册请求
-type RegisterReq struct {
+// User_RegisterReq 注册请求
+type User_RegisterReq struct {
 	NameZh    string
 	NameEn    string
 	Avatar    *multipart.FileHeader
@@ -23,33 +23,33 @@ type RegisterReq struct {
 	UserAgent string
 }
 
-// LoginReq 登陆请求
-type LoginReq struct {
+// User_LoginReq 登陆请求
+type User_LoginReq struct {
 	Name      string `json:"name"`
 	Password  string `json:"password"`
 	UserAgent string `json:"userAgent"`
 }
 
-// UserInfoRsp 用户信息响应
-type UserInfoRsp struct {
-	NameEn string `json:"nameEn"`
-	Avatar string `json:"avatar"`
+// User_InfoRsp 用户信息响应
+type User_InfoRsp struct {
+	NameEn string `json:"nameEn,omitempty"`
+	Avatar string `json:"avatar,omitempty"`
+	NameZh string `json:"nameZh,omitempty"`
+}
+
+// User_UpdateInfoReq 更新用户信息请求
+type User_UpdateInfoReq struct {
 	NameZh string `json:"nameZh"`
 }
 
-// UpdateInfoReq 更新用户信息请求
-type UpdateInfoReq struct {
-	NameZh string `json:"nameZh"`
-}
-
-// ChangePasswordReq 更改密码请求
-type ChangePasswordReq struct {
+// User_ChangePasswordReq 更改密码请求
+type User_ChangePasswordReq struct {
 	OldPassword      string `json:"oldPassword"`
 	NewPassword      string `json:"newPassword"`
 	NewPasswordAgain string `json:"newPasswordAgain"`
 }
 
-// ChangeAvatarReq 修改头像请求
-type ChangeAvatarReq struct {
+// User_ChangeAvatarReq 修改头像请求
+type User_ChangeAvatarReq struct {
 	Avatar *multipart.FileHeader
 }

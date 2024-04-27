@@ -15,18 +15,21 @@ package protocol
 import "io"
 
 const (
-	// DownloadType_UserAvatar 下载用户头像
-	DownloadType_UserAvatar = 1 + iota
-	DownloadType_AppLogo
+	// 下载用户头像
+	File_DownloadType_UserAvatar = 1 + iota
+	// 下载应用图标
+	File_DownloadType_AppLogo
 )
 
 const (
-	UploadType_UserAvatar = 1 + iota
-	UploadType_AppLogo
+	// 上传用户头像
+	File_UploadType_UserAvatar = 1 + iota
+	// 上传应用图标
+	File_UploadType_AppLogo
 )
 
-// InitialUploadReq 初始化分片上传请求参数
-type InitialUploadReq struct {
+// File_InitialUploadReq 初始化分片上传请求参数
+type File_InitialUploadReq struct {
 	Type   int    `json:"type"`
 	Name   string `json:"name"`
 	Size   int    `json:"size"`
@@ -35,27 +38,27 @@ type InitialUploadReq struct {
 	SHA256 string `json:"sha256"`
 }
 
-// InitialUploadRsp 初始化分片上传响应数据
-type InitialUploadRsp struct {
-	Id     string `json:"id"`
-	Exists bool   `json:"exists"`
+// File_InitialUploadRsp 初始化分片上传响应数据
+type File_InitialUploadRsp struct {
+	Id     string `json:"id,omitempty"`
+	Exists bool   `json:"exists,omitempty"`
 }
 
-// UploadPartReq 上传分片请求参数
-type UploadPartReq struct {
+// File_UploadPartReq 上传分片请求参数
+type File_UploadPartReq struct {
 	FileId    string
 	ChunkNum  int
 	ChunkSize int
 	Chunk     io.Reader
 }
 
-// MergePartReq 合并分片请求
-type MergePartReq struct {
+// File_MergePartReq 合并分片请求
+type File_MergePartReq struct {
 	FileId string
 }
 
-// DownloadReq 下载请求参数
-type DownloadReq struct {
+// File_DownloadReq 下载请求参数
+type File_DownloadReq struct {
 	Type   int    `form:"type"`
 	AppId  string `form:"appId"`
 	FileId string `form:"fileId"`

@@ -30,6 +30,7 @@ import (
 	"gitee.com/ivfzhou/gotools/v4"
 	"gitee.com/ivfzhou/tus_client"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
@@ -42,8 +43,8 @@ import (
 	"backend/protocol"
 )
 
-// Create 注册应用
-func Create(ctx context.Context, req *protocol.CreateReq) (err error) {
+// App_Create 注册应用
+func App_Create(ctx context.Context, req *protocol.App_CreateReq) (err error) {
 	// 校验
 	if len(req.Name) <= 0 || req.Platform <= 0 {
 		return errs.NewParamsErr(nil)
@@ -190,8 +191,8 @@ func Create(ctx context.Context, req *protocol.CreateReq) (err error) {
 	return nil
 }
 
-// Update 更新应用
-func Update(ctx context.Context, req *protocol.UpdateReq) (err error) {
+// App_Update 更新应用
+func App_Update(ctx context.Context, req *protocol.App_UpdateReq) (err error) {
 	// 校验
 	appId := ctxs.AppId(ctx)
 	if len(req.Name) <= 0 || appId <= 0 {
@@ -283,8 +284,8 @@ func Update(ctx context.Context, req *protocol.UpdateReq) (err error) {
 	return nil
 }
 
-// Delete 注销应用
-func Delete(ctx context.Context) error {
+// App_Delete 注销应用
+func App_Delete(ctx context.Context) error {
 	// 校验
 	appId := ctxs.AppId(ctx)
 	if appId <= 0 {
@@ -304,7 +305,10 @@ func Delete(ctx context.Context) error {
 
 	// 更新应用表记录
 	err = conn.GetMySQLClient(ctx).Model(&model.TApp{}).Where("id = ?", tapp.Id).
-		UpdateColumn("status", model.TApp_Status_Locked).Error
+		UpdateColumns(map[string]any{
+			"status": model.TApp_Status_Locked,
+			"name":   gorm.Expr("concat(name, ?)", "（已注销）"),
+		}).Error
 	if err != nil {
 		log.Error(ctx, err)
 		return errs.NewSystemBusyErr(err)
@@ -328,8 +332,8 @@ func Delete(ctx context.Context) error {
 	return nil
 }
 
-// ChangeLogo 修改图标
-func ChangeLogo(ctx context.Context, req *protocol.ChangeLogoReq) error {
+// App_ChangeLogo 修改图标
+func App_ChangeLogo(ctx context.Context, req *protocol.App_ChangeLogoReq) error {
 	// 校验
 	if len(req.LogoId) != consts.FileIdLength {
 		return errs.NewParamsErr(nil)
@@ -344,6 +348,9 @@ func ChangeLogo(ctx context.Context, req *protocol.ChangeLogoReq) error {
 	}
 	if tfile.Id <= 0 {
 		return errs.NewParamsErr(nil)
+	}
+	if !IsValidPicExt(ctx, tfile.Name) {
+		return errs.NewParamsErrMsg("图标格式非法")
 	}
 
 	// 更新库表
@@ -367,6 +374,64 @@ func ChangeLogo(ctx context.Context, req *protocol.ChangeLogoReq) error {
 	}
 
 	return nil
+}
+
+// App_Info 获取应用信息
+func App_Info(ctx context.Context) (*protocol.App_InfoRsp, error) {
+	// 查库
+	appId := ctxs.AppId(ctx)
+	var tapp model.TApp
+	err := conn.GetMySQLClient(ctx).Where("id = ?", appId).Find(&tapp).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, errs.NewSystemBusyErr(err)
+	}
+	var admins []*model.TUser
+	err = conn.GetMySQLClient(ctx).Where("id in (?)",
+		conn.GetMySQLClient(ctx).Model(&model.TUserRole{}).Select("user_id").
+			Where("app_id = ? and role = ?", tapp.Id, model.TUserRole_Role_AppAdmin)).
+		Find(&admins).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, errs.NewSystemBusyErr(err)
+	}
+	var members []*model.TUser
+	err = conn.GetMySQLClient(ctx).Where("id in (?)",
+		conn.GetMySQLClient(ctx).Model(&model.TUserRole{}).Select("user_id").
+			Where("app_id = ? and role = ?", tapp.Id, model.TUserRole_Role_AppMember)).
+		Find(&members).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return nil, errs.NewSystemBusyErr(err)
+	}
+
+	// 处理数据
+	res := &protocol.App_InfoRsp{
+		AppId:    tapp.AppId,
+		Name:     tapp.Name,
+		Avatar:   tapp.Avatar,
+		Platform: int(tapp.Platform),
+	}
+	for _, v := range admins {
+		res.Admins = append(res.Admins, &struct {
+			NameEn string `json:"nameEn,omitempty"`
+			NameZn string `json:"nameZh,omitempty"`
+		}{
+			NameEn: v.NameEn,
+			NameZn: v.NameZh,
+		})
+	}
+	for _, v := range members {
+		res.Members = append(res.Members, &struct {
+			NameEn string `json:"nameEn,omitempty"`
+			NameZn string `json:"nameZh,omitempty"`
+		}{
+			NameEn: v.NameEn,
+			NameZn: v.NameZh,
+		})
+	}
+
+	return res, nil
 }
 
 // IsValidAppLogo 头像是否合规

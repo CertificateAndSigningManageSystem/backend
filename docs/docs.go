@@ -72,7 +72,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protocol.InitialUploadReq"
+                            "$ref": "#/definitions/protocol.File_InitialUploadReq"
                         }
                     }
                 ],
@@ -80,7 +80,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/protocol.InitialUploadRsp"
+                            "$ref": "#/definitions/protocol.File_InitialUploadRsp"
                         }
                     }
                 }
@@ -168,7 +168,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "protocol.InitialUploadReq": {
+        "protocol.File_InitialUploadReq": {
             "type": "object",
             "properties": {
                 "md5": {
@@ -191,7 +191,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protocol.InitialUploadRsp": {
+        "protocol.File_InitialUploadRsp": {
             "type": "object",
             "properties": {
                 "exists": {

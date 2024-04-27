@@ -52,7 +52,7 @@ func init() {
 	go func() {
 		// 监听关闭信号
 		ch := make(chan os.Signal, 1)
-		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGSEGV, syscall.SIGUSR2)
+		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM, syscall.SIGSEGV /*syscall.SIGUSR2*/)
 		<-ch
 		log.Warn(ctx, "exiting server")
 		cancel()

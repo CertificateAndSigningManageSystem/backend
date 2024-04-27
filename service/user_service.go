@@ -56,8 +56,8 @@ type SessionInfo struct {
 	UserAgent string `json:"userAgent"`
 }
 
-// Register 注册
-func Register(ctx context.Context, req *protocol.RegisterReq) (session string, err error) {
+// User_Register 注册
+func User_Register(ctx context.Context, req *protocol.User_RegisterReq) (session string, err error) {
 	// 校验
 	if !IsValidUserNameZh(ctx, req.NameZh) {
 		return "", errs.NewParamsErrMsg("中文名应全是汉字且不超过8个字符")
@@ -177,8 +177,8 @@ func Register(ctx context.Context, req *protocol.RegisterReq) (session string, e
 	return session, nil
 }
 
-// Login 登陆
-func Login(ctx context.Context, req *protocol.LoginReq) (session string, err error) {
+// User_Login 登陆
+func User_Login(ctx context.Context, req *protocol.User_LoginReq) (session string, err error) {
 	// 校验
 	if len(req.Name) <= 0 {
 		return "", errs.NewParamsErrMsg("姓名不能为空")
@@ -286,8 +286,8 @@ func Login(ctx context.Context, req *protocol.LoginReq) (session string, err err
 	return session, nil
 }
 
-// Logout 登出
-func Logout(ctx context.Context, user, session string) error {
+// User_Logout 登出
+func User_Logout(ctx context.Context, user, session string) error {
 	// 删除会话缓存
 	err := conn.GetRedisClient(ctx).Del(ctx, fmt.Sprintf(conn.CacheKey_UserSessionFmt, user, session)).Err()
 	if err != nil {
@@ -298,11 +298,11 @@ func Logout(ctx context.Context, user, session string) error {
 	return nil
 }
 
-// GetUserInfo 获取用户信息
-func GetUserInfo(ctx context.Context) (*protocol.UserInfoRsp, error) {
+// User_GetInfo 获取用户信息
+func User_GetInfo(ctx context.Context) (*protocol.User_InfoRsp, error) {
 	userId := ctxs.UserId(ctx)
 	if userId <= 0 {
-		return &protocol.UserInfoRsp{}, nil
+		return &protocol.User_InfoRsp{}, nil
 	}
 
 	// 查库
@@ -314,7 +314,7 @@ func GetUserInfo(ctx context.Context) (*protocol.UserInfoRsp, error) {
 	}
 
 	// 处理数据
-	res := &protocol.UserInfoRsp{
+	res := &protocol.User_InfoRsp{
 		NameEn: tuser.NameEn,
 		Avatar: tuser.Avatar,
 		NameZh: tuser.NameZh,
@@ -323,8 +323,8 @@ func GetUserInfo(ctx context.Context) (*protocol.UserInfoRsp, error) {
 	return res, nil
 }
 
-// UpdateInfo 更新用户信息
-func UpdateInfo(ctx context.Context, req *protocol.UpdateInfoReq) error {
+// User_UpdateInfo 更新用户信息
+func User_UpdateInfo(ctx context.Context, req *protocol.User_UpdateInfoReq) error {
 	// 校验
 	if !IsValidUserNameZh(ctx, req.NameZh) {
 		return errs.NewParamsErrMsg("中文名应全是汉字且不超过8个字符")
@@ -365,8 +365,8 @@ func UpdateInfo(ctx context.Context, req *protocol.UpdateInfoReq) error {
 	return nil
 }
 
-// ChangePassword 修改密码
-func ChangePassword(ctx context.Context, req *protocol.ChangePasswordReq) error {
+// User_ChangePassword 修改密码
+func User_ChangePassword(ctx context.Context, req *protocol.User_ChangePasswordReq) error {
 	// 校验
 	if len(req.OldPassword) <= 0 || len(req.NewPassword) <= 0 || len(req.NewPasswordAgain) <= 0 ||
 		req.NewPassword != req.NewPasswordAgain || !IsValidPassword(ctx, req.OldPassword) ||
@@ -417,8 +417,8 @@ func ChangePassword(ctx context.Context, req *protocol.ChangePasswordReq) error 
 	return nil
 }
 
-// ChangeAvatar 修改头像
-func ChangeAvatar(ctx context.Context, req *protocol.ChangeAvatarReq) error {
+// User_ChangeAvatar 修改头像
+func User_ChangeAvatar(ctx context.Context, req *protocol.User_ChangeAvatarReq) error {
 	// 校验
 	fileName := req.Avatar.Filename
 	data, b, err := IsValidUserAvatar(ctx, req.Avatar)

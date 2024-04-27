@@ -58,7 +58,7 @@ func AuthenticateFilter(c *gin.Context) {
 	userId := ctxs.UserId(ctx)
 	authId := ctxs.APIAuthId(ctx)
 
-	// 如果userId合法则校验权限和状态
+	// 如果 userId 合法则校验权限和状态
 	if userId > 0 {
 		// 获取 app 信息
 		appId := c.Param("appId")
@@ -95,7 +95,7 @@ func AuthenticateFilter(c *gin.Context) {
 		c.Request = c.Request.WithContext(ctx)
 	}
 
-	// 如果authId合法则校验权限和其应用状态
+	// 如果 authId 合法则校验权限和其应用状态
 	if authId > 0 {
 		// 获取需要的权限项
 		index := authInfoDat.MatchesIndex(path)

@@ -65,7 +65,7 @@ func (*AppApi) Create(c *gin.Context) {
 	if len(files) == 1 {
 		file = files[0]
 	}
-	req := &protocol.CreateReq{
+	req := &protocol.App_CreateReq{
 		Name:     names[0],
 		Platform: platform,
 		Logo:     file,
@@ -74,7 +74,7 @@ func (*AppApi) Create(c *gin.Context) {
 	}
 
 	// 调用下游
-	if err = service.Create(ctx, req); err != nil {
+	if err = service.App_Create(ctx, req); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
@@ -86,7 +86,7 @@ func (*AppApi) Create(c *gin.Context) {
 func (*AppApi) Update(c *gin.Context) {
 	ctx := c.Request.Context()
 	// 解析请求参数
-	var req protocol.UpdateReq
+	var req protocol.App_UpdateReq
 	err := c.ShouldBind(&req)
 	if err != nil {
 		log.Warn(ctx, err)
@@ -95,7 +95,7 @@ func (*AppApi) Update(c *gin.Context) {
 	}
 
 	// 调用下游
-	if err = service.Update(ctx, &req); err != nil {
+	if err = service.App_Update(ctx, &req); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
@@ -108,7 +108,7 @@ func (*AppApi) Delete(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 调用下游
-	err := service.Delete(ctx)
+	err := service.App_Delete(ctx)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
@@ -122,7 +122,7 @@ func (*AppApi) ChangeLogo(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// 解析数据
-	var req protocol.ChangeLogoReq
+	var req protocol.App_ChangeLogoReq
 	err := c.ShouldBind(&req)
 	if err != nil {
 		log.Warn(ctx, err)
@@ -131,10 +131,24 @@ func (*AppApi) ChangeLogo(c *gin.Context) {
 	}
 
 	// 调用下游
-	if err = service.ChangeLogo(ctx, &req); err != nil {
+	if err = service.App_ChangeLogo(ctx, &req); err != nil {
 		util.FailByErr(c, err)
 		return
 	}
 
 	util.SuccessMsg(c, "修改成功")
+}
+
+// Info 获取应用信息
+func (*AppApi) Info(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// 调用下游
+	rsp, err := service.App_Info(ctx)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.Success(c, rsp)
 }

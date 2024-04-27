@@ -17,7 +17,7 @@ replace gitee.com/CertificateAndSigningManageSystem/common => ../common
 require (
 	gitee.com/CertificateAndSigningManageSystem/common v0.0.0-20240316090304-6eeff768e8f1
 	gitee.com/ivfzhou/double-array-trie v1.2.1
-	gitee.com/ivfzhou/gotools/v4 v4.0.2
+	gitee.com/ivfzhou/gotools/v4 v4.1.0
 	gitee.com/ivfzhou/tus_client v0.4.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-ini/ini v1.67.0
@@ -29,6 +29,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.3
+	gorm.io/gorm v1.25.7
 )
 
 require (
@@ -78,5 +79,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.5.4 // indirect
-	gorm.io/gorm v1.25.7 // indirect
 )

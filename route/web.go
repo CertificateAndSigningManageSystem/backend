@@ -51,4 +51,6 @@ func initWebRoute(r *gin.RouterGroup) {
 	appGroup.DELETE("/delete/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.Delete)
 	filter.AddPathAuthorities("/web/app/changeLogo", model.TUserRole_Role_AppAdmin)
 	appGroup.PUT("/changeLogo/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.ChangeLogo)
+	filter.AddPathAuthorities("/web/app/info", model.TUserRole_Role_Admin, model.TUserRole_Role_AppAdmin, model.TUserRole_Role_AppMember)
+	appGroup.GET("/info/:appId", filter.AuthenticateFilter, app.Info)
 }
