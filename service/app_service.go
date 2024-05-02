@@ -352,6 +352,16 @@ func App_ChangeLogo(ctx context.Context, req *protocol.App_ChangeLogoReq) error 
 	if !IsValidPicExt(ctx, tfile.Name) {
 		return errs.NewParamsErrMsg("图标格式非法")
 	}
+	// 校验应用状态
+	var appStatus uint8
+	err = conn.GetMySQLClient(ctx).Model(&model.TApp{}).Select("status").Where("id = ?", appId).Find(&appStatus).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	if appStatus != model.TApp_Status_OK {
+		return errs.NewParamsErrMsg("应用信息不可更改")
+	}
 
 	// 更新库表
 	err = conn.GetMySQLClient(ctx).Model(&model.TApp{}).Where("id = ?", appId).UpdateColumn("avatar", req.LogoId).Error

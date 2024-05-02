@@ -43,14 +43,21 @@ func initWebRoute(r *gin.RouterGroup) {
 
 	// 应用管理模块
 	app := &api.AppApi{}
-	appGroup := r.Group("/app", filter.DateCheckFilter, filter.WebAuthFilter, filter.AntiShakeFilter)
-	appGroup.POST("/create", filter.TransactionFilter, app.Create)
+	appGroup := r.Group("/app", filter.DateCheckFilter, filter.WebAuthFilter)
+	appGroup.POST("/create", filter.AntiShakeFilter, filter.TransactionFilter, app.Create)
 	filter.AddPathAuthorities("/web/app/update", model.TUserRole_Role_AppAdmin)
-	appGroup.POST("/update/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.Update)
+	appGroup.POST("/update/:appId", filter.AntiShakeFilter, filter.AuthenticateFilter, filter.TransactionFilter, app.Update)
 	filter.AddPathAuthorities("/web/app/delete", model.TUserRole_Role_AppAdmin)
-	appGroup.DELETE("/delete/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.Delete)
+	appGroup.DELETE("/delete/:appId", filter.AntiShakeFilter, filter.AuthenticateFilter, filter.TransactionFilter, app.Delete)
 	filter.AddPathAuthorities("/web/app/changeLogo", model.TUserRole_Role_AppAdmin)
-	appGroup.PUT("/changeLogo/:appId", filter.AuthenticateFilter, filter.TransactionFilter, app.ChangeLogo)
+	appGroup.PUT("/changeLogo/:appId", filter.AntiShakeFilter, filter.AuthenticateFilter, filter.TransactionFilter, app.ChangeLogo)
 	filter.AddPathAuthorities("/web/app/info", model.TUserRole_Role_Admin, model.TUserRole_Role_AppAdmin, model.TUserRole_Role_AppMember)
 	appGroup.GET("/info/:appId", filter.AuthenticateFilter, app.Info)
+
+	// open api 凭证管理
+	openapi := &api.OpenApi{}
+	openapiGroup := r.Group("/openapi", filter.DateCheckFilter, filter.WebAuthFilter)
+	filter.AddPathAuthorities("/web/openapi/create", model.TUserRole_Role_AppAdmin)
+	openapiGroup.POST("/create/:appId", filter.AntiShakeFilter, filter.AuthenticateFilter, filter.TransactionFilter, openapi.Create)
+
 }
