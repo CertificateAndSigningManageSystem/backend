@@ -129,6 +129,96 @@ func Open_Create(ctx context.Context, req *protocol.Open_CreateReq) (*protocol.O
 	return &protocol.Open_CreateRsp{Secret: secret}, nil
 }
 
+// Open_Update 修改凭证
+func Open_Update(ctx context.Context, req *protocol.Open_UpdateReq) error {
+	// 校验
+	b, ip := IsValidAuthIP(ctx, req.IP)
+	if len(req.ActionIds) <= 0 || !IsValidAuthId(ctx, req.Id) || !b || !IsValidFrequency(ctx, req.Frequency) {
+		return errs.NewParamsErr(nil)
+	}
+	appId := ctxs.AppId(ctx)
+	// 获取应用平台，校验授权项
+	var platform int
+	err := conn.GetMySQLClient(ctx).Model(&model.TApp{}).Select("platform").Where("id = ?", appId).Find(&platform).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	var count int
+	err = conn.GetMySQLClient(ctx).Model(&model.TAuthorizationAction{}).Select("count(id)").
+		Where("id in ? and (platform = ? or platform = ?)", req.ActionIds, platform, model.TApp_Platform_All).
+		Find(&count).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	if count != len(req.ActionIds) {
+		return errs.NewParamsErrMsg("选择的授权项非法")
+	}
+	// 校验应用状态
+	var appStatus uint8
+	err = conn.GetMySQLClient(ctx).Model(&model.TApp{}).Select("status").Where("id = ?", appId).Find(&appStatus).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	if appStatus != model.TApp_Status_OK {
+		return errs.NewParamsErrMsg("应用信息不可更改")
+	}
+	// 校验凭证是否存在
+	var authId uint
+	err = conn.GetMySQLClient(ctx).Model(&model.TAuthorization{}).Select("id").
+		Where("app_id = ? and auth_id = ?", appId, req.Id).Find(&authId).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	if authId <= 0 {
+		return errs.NewParamsErrMsg("凭证不存在")
+	}
+
+	// 更新凭证
+	err = conn.GetMySQLClient(ctx).Model(&model.TAuthorization{}).Where("app_id = ? and auth_id = ?", appId, req.Id).
+		UpdateColumns(map[string]any{
+			"ip":        ip,
+			"frequency": req.Frequency,
+		}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	// 删除所有授权项，再新增
+	err = conn.GetMySQLClient(ctx).Where("auth_id = ?", authId).Delete(&model.TAuthorizationActionRelation{}).Error
+	if err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	aar := gotools.ConvertSlice(req.ActionIds, func(e int) *model.TAuthorizationActionRelation {
+		return &model.TAuthorizationActionRelation{
+			AuthId:   authId,
+			ActionId: uint(e),
+		}
+	})
+	if err = conn.GetMySQLClient(ctx).CreateInBatches(aar, len(aar)).Error; err != nil {
+		log.Error(ctx, err)
+		return errs.NewSystemBusyErr(err)
+	}
+	// 记录操作事件
+	userId := ctxs.UserId(ctx)
+	err = CreateEvent(ctx, &model.TEvent{
+		Type:      model.TEvent_Type_UpdateOpenAPIToken,
+		OccurTime: time.Now(),
+		UserId:    userId,
+		AppId:     appId,
+		Content:   fmt.Sprintf("用户%d修改凭证%s", userId, req.Id),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func IsValidAuthIP(_ context.Context, ip string) (bool, string) {
 	ip = string(gotools.FilterSlice([]byte(ip), func(e byte) bool { return e != ' ' }))
 	if len(ip) <= 0 {

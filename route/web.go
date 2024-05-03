@@ -59,5 +59,7 @@ func initWebRoute(r *gin.RouterGroup) {
 	openapiGroup := r.Group("/openapi", filter.DateCheckFilter, filter.WebAuthFilter)
 	filter.AddPathAuthorities("/web/openapi/create", model.TUserRole_Role_AppAdmin)
 	openapiGroup.POST("/create/:appId", filter.AntiShakeFilter, filter.AuthenticateFilter, filter.TransactionFilter, openapi.Create)
+	filter.AddPathAuthorities("/web/openapi/update", model.TUserRole_Role_AppAdmin)
+	openapiGroup.PUT("/update/:appId", filter.AntiShakeFilter, filter.AuthenticateFilter, filter.TransactionFilter, openapi.Update)
 
 }

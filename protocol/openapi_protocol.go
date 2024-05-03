@@ -12,6 +12,7 @@
 
 package protocol
 
+// Open_CreateReq 创建凭证请求
 type Open_CreateReq struct {
 	Id        string `json:"id"`
 	IP        string `json:"ip"`
@@ -19,6 +20,15 @@ type Open_CreateReq struct {
 	ActionIds []int  `json:"actionIds"`
 }
 
+// Open_CreateRsp 创建凭证响应
 type Open_CreateRsp struct {
 	Secret string `json:"secret"`
+}
+
+// Open_UpdateReq 修改凭证请求
+type Open_UpdateReq struct {
+	Id        string `json:"id"`
+	IP        string `json:"ip"`
+	Frequency int    `json:"frequency"`
+	ActionIds []int  `json:"actionIds"`
 }

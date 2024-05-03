@@ -46,3 +46,25 @@ func (*OpenApi) Create(c *gin.Context) {
 
 	util.Success(c, rsp)
 }
+
+// Update 更新凭证
+func (*OpenApi) Update(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// 解析请求参数
+	var req protocol.Open_UpdateReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	// 调用下游
+	err = service.Open_Update(ctx, &req)
+	if err != nil {
+		util.FailByErr(c, err)
+		return
+	}
+
+	util.SuccessMsg(c, "更新成功")
+}
