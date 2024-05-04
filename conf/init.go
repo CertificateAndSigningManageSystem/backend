@@ -23,12 +23,13 @@ var Conf Data
 
 // Data 配置
 type Data struct {
-	ServeAddr string `ini:"serveAddr"`
-	TusServer string `ini:"tusServer"`
-	Log       `ini:"log"`
-	Redis     `ini:"redis"`
-	MySQL     `ini:"mysql"`
-	RabbitMQ  `ini:"rabbitmq"`
+	ServeAddr    string `ini:"serveAddr"`
+	InternalAddr string `ini:"internalAddr"`
+	TusServer    string `ini:"tusServer"`
+	Log          `ini:"log"`
+	Redis        `ini:"redis"`
+	MySQL        `ini:"mysql"`
+	RabbitMQ     `ini:"rabbitmq"`
 }
 
 // Log 日志配置

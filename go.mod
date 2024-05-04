@@ -8,14 +8,12 @@
 // MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 // See the Mulan PSL v2 for more details.
 
-module backend
+module gitee.com/CertificateAndSigningManageSystem/backend
 
 go 1.22
 
-replace gitee.com/CertificateAndSigningManageSystem/common => ../common
-
 require (
-	gitee.com/CertificateAndSigningManageSystem/common v0.0.0-20240316090304-6eeff768e8f1
+	gitee.com/CertificateAndSigningManageSystem/common v0.0.0-20240502142625-2bc207607f4d
 	gitee.com/ivfzhou/double-array-trie v1.2.1
 	gitee.com/ivfzhou/gotools/v4 v4.1.0
 	gitee.com/ivfzhou/tus_client v0.4.1

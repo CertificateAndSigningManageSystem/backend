@@ -17,13 +17,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"gitee.com/CertificateAndSigningManageSystem/backend/consts"
+	"gitee.com/CertificateAndSigningManageSystem/backend/protocol"
+	"gitee.com/CertificateAndSigningManageSystem/backend/service"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
-
-	"backend/consts"
-	"backend/protocol"
-	"backend/service"
 )
 
 // UserApi 用户管理模块

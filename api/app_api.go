@@ -19,12 +19,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"gitee.com/CertificateAndSigningManageSystem/backend/protocol"
+	"gitee.com/CertificateAndSigningManageSystem/backend/service"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
-
-	"backend/protocol"
-	"backend/service"
 )
 
 // AppApi 应用管理模块

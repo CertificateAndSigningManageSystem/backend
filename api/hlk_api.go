@@ -20,48 +20,27 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
 )
 
-// OpenApi 凭证管理模块
-type OpenApi struct{}
+// HLKApi 供 hlk_manager 使用的相关接口
+type HLKApi struct{}
 
-// Create 创建凭证
-func (*OpenApi) Create(c *gin.Context) {
+// QueryJobInfo 获取任务信息
+func (api *HLKApi) QueryJobInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// 解析请求参数
-	var req protocol.Open_CreateReq
-	err := c.ShouldBind(&req)
+	// 获取请求参数
+	req := protocol.HLK_QueryJobInfoReq{}
+	err := c.ShouldBindQuery(&req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
 	}
 
 	// 调用下游
-	rsp, err := service.Open_Create(ctx, &req)
+	rsp, err := service.HLK_QueryJobInfo(ctx, &req)
 	if err != nil {
 		util.FailByErr(c, err)
 		return
 	}
 
 	util.Success(c, rsp)
-}
-
-// Update 更新凭证
-func (*OpenApi) Update(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	// 解析请求参数
-	var req protocol.Open_UpdateReq
-	err := c.ShouldBind(&req)
-	if err != nil {
-		util.FailByErr(c, err)
-		return
-	}
-
-	// 调用下游
-	if err = service.Open_Update(ctx, &req); err != nil {
-		util.FailByErr(c, err)
-		return
-	}
-
-	util.SuccessMsg(c, "更新成功")
 }

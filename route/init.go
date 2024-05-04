@@ -19,7 +19,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"backend/filter"
+	"gitee.com/CertificateAndSigningManageSystem/backend/filter"
 )
 
 // InitialRouter 初始化路由
@@ -38,6 +38,17 @@ func InitialRouter(ctx context.Context) *gin.Engine {
 	filter.InitialPathAuthoritiesDAT()
 	filter.InitialAPIAuthLimitScript(ctx)
 	filter.InitialAntiShakeScript(ctx)
+
+	return engine
+}
+
+// InitialInternalRouter 初始化内部网络接口
+func InitialInternalRouter(ctx context.Context) *gin.Engine {
+	engine := gin.New()
+	engine.Use(filter.ExitFilter(ctx), filter.Recover, filter.LogfmtFilter)
+
+	hlk := engine.Group("/hlk")
+	initHLKRoute(hlk)
 
 	return engine
 }

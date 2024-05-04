@@ -32,15 +32,14 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"gitee.com/CertificateAndSigningManageSystem/backend/consts"
+	"gitee.com/CertificateAndSigningManageSystem/backend/protocol"
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
-
-	"backend/consts"
-	"backend/protocol"
 )
 
 // App_Create 注册应用

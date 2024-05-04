@@ -27,7 +27,6 @@ import (
 
 const (
 	IdScope_File = "file"
-	IdScope_App  = "app"
 )
 
 // GenerateId 生成唯一 Id

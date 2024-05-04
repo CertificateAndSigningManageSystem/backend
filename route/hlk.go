@@ -18,10 +18,7 @@ import (
 	"gitee.com/CertificateAndSigningManageSystem/backend/api"
 )
 
-func initAPIRoute(r *gin.RouterGroup) {
-	upload := &api.FileAPI{}
-	uploadGroup := r.Group("/upload")
-	uploadGroup.POST("/initialUpload", upload.InitialUpload)
-	uploadGroup.PATCH("/uploadPart", upload.UploadPart)
-	uploadGroup.POST("/mergePart", upload.MergePart)
+func initHLKRoute(r *gin.RouterGroup) {
+	hlk := &api.HLKApi{}
+	r.GET("/queryJobInfo", hlk.QueryJobInfo)
 }

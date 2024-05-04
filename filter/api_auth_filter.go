@@ -24,14 +24,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
+	"gitee.com/CertificateAndSigningManageSystem/backend/service"
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
-	. "gitee.com/CertificateAndSigningManageSystem/common/model"
+	"gitee.com/CertificateAndSigningManageSystem/common/model"
 	"gitee.com/CertificateAndSigningManageSystem/common/util"
-
-	"backend/service"
 )
 
 const apiAuthLimitScript = `
@@ -83,7 +82,7 @@ func APIAuthFilter(c *gin.Context) {
 	token = token[5:]
 
 	// 解析JWT凭证
-	var authInfo *TAuthorization
+	var authInfo *model.TAuthorization
 	res, err := jwt.Parse(token, func(token *jwt.Token) (any, error) {
 		appId, err := token.Claims.GetIssuer()
 		if err != nil {

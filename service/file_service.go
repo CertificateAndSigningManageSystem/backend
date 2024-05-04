@@ -28,14 +28,13 @@ import (
 	"gitee.com/ivfzhou/tus_client"
 	"github.com/redis/go-redis/v9"
 
+	"gitee.com/CertificateAndSigningManageSystem/backend/consts"
+	"gitee.com/CertificateAndSigningManageSystem/backend/protocol"
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/errs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
 	"gitee.com/CertificateAndSigningManageSystem/common/model"
-
-	"backend/consts"
-	"backend/protocol"
 )
 
 type fileInfoCache struct {

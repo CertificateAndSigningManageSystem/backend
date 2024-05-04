@@ -13,7 +13,7 @@
 package main
 
 import (
-	_ "backend/docs"
+	_ "gitee.com/CertificateAndSigningManageSystem/backend/docs"
 
 	"context"
 	"os"
@@ -21,13 +21,12 @@ import (
 	"syscall"
 	"time"
 
+	"gitee.com/CertificateAndSigningManageSystem/backend/conf"
+	"gitee.com/CertificateAndSigningManageSystem/backend/cron"
+	"gitee.com/CertificateAndSigningManageSystem/backend/route"
 	"gitee.com/CertificateAndSigningManageSystem/common/conn"
 	"gitee.com/CertificateAndSigningManageSystem/common/ctxs"
 	"gitee.com/CertificateAndSigningManageSystem/common/log"
-
-	"backend/conf"
-	"backend/cron"
-	"backend/route"
 )
 
 var ctx, cancel = context.WithCancel(ctxs.NewCtx("main"))
@@ -69,6 +68,10 @@ func init() {
 func main() {
 	cron.InitialCron(ctx)
 
+	go func() {
+		internalRouter := route.InitialInternalRouter(ctx)
+		log.ErrorIf(ctx, internalRouter.Run(conf.Conf.InternalAddr))
+	}()
 	router := route.InitialRouter(ctx)
 	log.Info(ctx, "start serve")
 	log.ErrorIf(ctx, router.Run(conf.Conf.ServeAddr))
